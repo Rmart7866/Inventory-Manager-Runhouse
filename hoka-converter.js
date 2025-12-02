@@ -73,17 +73,49 @@ const HokaConverter = {
             features: ['Balanced cushioning', 'Smooth ride', 'Daily versatility', 'Premium foam'],
             category: 'neutral daily trainer',
             bestFor: 'Daily training, base miles, tempo runs'
+        },
+        'Gaviota 5': {
+            description: 'Maximum stability meets plush comfort in the Gaviota 5. Featuring an updated H-Frame™ design that guides your gait while delivering a smooth, cushioned ride.',
+            specs: { stack: '40/35mm', drop: '5mm', weight: '10.3 oz' },
+            features: ['Maximum stability', 'H-Frame technology', 'Plush cushioning', 'GuideRails support'],
+            category: 'max stability trainer',
+            bestFor: 'Daily training for severe overpronators, long runs, marathon training'
+        },
+        'Transport': {
+            description: 'The perfect everyday shoe that transitions from trail to town. Combines outdoor-inspired design with HOKA cushioning for all-day comfort.',
+            specs: { stack: '38/33mm', drop: '5mm', weight: '11.5 oz' },
+            features: ['Versatile design', 'CMEVA midsole', 'Durable outsole', 'All-terrain ready'],
+            category: 'lifestyle/casual',
+            bestFor: 'Everyday wear, casual walking, light trails, urban adventures'
+        },
+        'Solimar': {
+            description: 'A lightweight, responsive trainer designed for faster-paced runs. Features a propulsive midsole geometry and breathable engineered mesh upper.',
+            specs: { stack: '30/25mm', drop: '5mm', weight: '7.2 oz' },
+            features: ['Lightweight build', 'Responsive cushioning', 'Breathable mesh', 'Tempo-ready'],
+            category: 'lightweight performance trainer',
+            bestFor: 'Tempo runs, speed workouts, race day, faster training paces'
+        },
+        'Speedgoat 6': {
+            description: 'Named after legendary ultrarunner Karl "Speedgoat" Metzler, this trail icon delivers unmatched traction and protection on technical terrain.',
+            specs: { stack: '33/29mm', drop: '4mm', weight: '9.7 oz' },
+            features: ['Vibram Megagrip outsole', 'Trail protection', 'Aggressive traction', 'Technical terrain'],
+            category: 'trail running',
+            bestFor: 'Technical trails, ultra-distance, mountain running, all-terrain adventures'
         }
     },
     
-    allowedProducts: ['Mach 6', 'Mach X 3', 'Skyward X', 'Clifton 10', 'Bondi 9', 'Arahi 8', 'Skyflow'],
+    allowedProducts: ['Mach 6', 'Mach X 3', 'Skyward X', 'Clifton 10', 'Bondi 9', 'Arahi 8', 'Skyflow', 'Gaviota 5', 'Transport', 'Solimar', 'Speedgoat 6'],
     
     isAllowedProduct(productName) {
         if (!productName) return false;
         let nameLower = productName.toLowerCase();
         
-        // Strip width indicators from product name before matching
+        // Strip gender prefix
+        nameLower = nameLower.replace(/^[mwuy]\s+/, '');
+        
+        // Strip width indicators and variants from product name before matching
         nameLower = nameLower.replace(/ wide$/, '').replace(/ x-wide$/, '');
+        nameLower = nameLower.replace(/ gtx$/, '').replace(/ chukka$/, '').replace(/ hike$/, '').replace(/ mid$/, '');
         
         if (nameLower.includes('arahi')) {
             return nameLower.includes('arahi 8') || nameLower.includes('arahi8');
@@ -99,8 +131,12 @@ const HokaConverter = {
         if (!productName) return null;
         let nameLower = productName.toLowerCase();
         
-        // Strip width indicators from product name before matching
+        // Strip gender prefix
+        nameLower = nameLower.replace(/^[mwuy]\s+/, '');
+        
+        // Strip width indicators and variants from product name before matching
         nameLower = nameLower.replace(/ wide$/, '').replace(/ x-wide$/, '');
+        nameLower = nameLower.replace(/ gtx$/, '').replace(/ chukka$/, '').replace(/ hike$/, '').replace(/ mid$/, '');
         
         if (nameLower.includes('arahi')) {
             if (nameLower.includes('arahi 8') || nameLower.includes('arahi8')) {
@@ -122,10 +158,10 @@ const HokaConverter = {
         if (!division) return '';
         const divStr = division.toString().trim();
         // Keep the apostrophe for handle generation
-        if (divStr.toLowerCase() === "women's" || divStr.toLowerCase() === "womens") return "Women's";
-        if (divStr.toLowerCase() === "men's" || divStr.toLowerCase() === "mens") return "Men's";
+        if (divStr.toLowerCase() === "women's" || divStr.toLowerCase() === "womens" || divStr === "W") return "Women's";
+        if (divStr.toLowerCase() === "men's" || divStr.toLowerCase() === "mens" || divStr === "M") return "Men's";
         if (divStr.toLowerCase() === "youth" || divStr.toLowerCase() === "kids") return 'Youth';
-        if (divStr.toLowerCase() === "unisex") return 'Unisex';
+        if (divStr.toLowerCase() === "unisex" || divStr === "U") return 'Unisex';
         // Return original if no match
         return divStr;
     },
@@ -153,13 +189,13 @@ const HokaConverter = {
             
             // Skip header row if it exists
             let startIdx = 0;
-            if (data.length > 0 && data[0][0] === 'Division') {
+            if (data.length > 0 && (data[0][0] === 'Division' || data[0][5] === 'Style Name' || data[0][5] === 'Product Name')) {
                 startIdx = 1;
             }
             
             const filteredProducts = data.slice(startIdx).filter(row => {
                 if (!row || row.length < 10) return false;
-                const productName = row[5]; // Style Name column
+                const productName = row[5]; // Style Name / Product Name column
                 const division = row[0]; // Division/Gender column
                 
                 // Skip youth products
@@ -178,13 +214,13 @@ const HokaConverter = {
                 const product = filteredProducts[i];
                 
                 const division = product[0];  // Gender/Division
-                const productName = product[5];  // Style Name
-                const colorway = product[6];  // Style Colorway
-                const styleSKU = product[7];  // Style SKU
+                const productName = product[5];  // Style Name / Product Name
+                const colorway = product[6];  // Style Colorway / Product Color
+                const styleSKU = product[7];  // Style SKU / Product Number
                 const sizeInfo = product[8];  // Size
-                const variantSKU = product[9];  // Variant SKU
+                const variantSKU = product[9];  // Variant SKU / SKU
                 const upc = product[10];  // UPC
-                const availableDate = product[11];  // Available date (column 11) - ADDED!
+                const availableDate = product[11];  // Available date (column 11)
                 const quantity = product[12];  // Quantity
                 const retail = product[14];  // MSRP
                 
@@ -201,6 +237,10 @@ const HokaConverter = {
                 let size = sizeInfo ? sizeInfo.toString().replace(/[A-Z]/g, '') : '';
                 if (size) {
                     size = size.replace(/^0/, '');
+                    // Handle malformed sizes with slashes
+                    if (size.includes('/')) {
+                        size = size.split('/')[0];
+                    }
                     if (!size.includes('.')) {
                         size = size + '.0';
                     }
@@ -213,7 +253,13 @@ const HokaConverter = {
                     
                     const sizeStr = sizeInfo.toString().toUpperCase();
                     
-                    if (isWomen) {
+                    // Also check product name for width indicators
+                    const nameUpper = productName ? productName.toUpperCase() : '';
+                    if (nameUpper.includes('X-WIDE') || nameUpper.includes('XWIDE')) {
+                        width = 'Extra Wide';
+                    } else if (nameUpper.includes(' WIDE')) {
+                        width = 'Wide';
+                    } else if (isWomen) {
                         // Women's widths: B=Regular, D=Wide, EE=Extra Wide (2E)
                         if (sizeStr.includes('EE') || sizeStr.includes('2E')) {
                             width = 'Extra Wide';
