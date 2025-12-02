@@ -1,0 +1,1082 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Run House Inventory Manager</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f7fa;
+            min-height: 100vh;
+            padding: 32px;
+        }
+
+        /* Password Screen */
+        #password-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+
+        .password-box {
+            background: white;
+            padding: 60px 50px;
+            border-radius: 24px;
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.3);
+            text-align: center;
+            max-width: 480px;
+            width: 90%;
+        }
+
+        .password-box h2 {
+            font-size: 36px;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin-bottom: 16px;
+        }
+
+        .password-box p {
+            color: #6c757d;
+            margin-bottom: 36px;
+            font-size: 16px;
+        }
+
+        .password-input {
+            width: 100%;
+            padding: 18px 24px;
+            border: 2px solid #e1e8ed;
+            border-radius: 12px;
+            font-size: 17px;
+            margin-bottom: 20px;
+            transition: all 0.2s ease;
+        }
+
+        .password-input:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.15);
+        }
+
+        .password-submit {
+            width: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 18px;
+            font-size: 17px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .password-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .password-error {
+            color: #dc3545;
+            font-size: 15px;
+            margin-top: 16px;
+            display: none;
+            font-weight: 500;
+        }
+
+        #app-content {
+            display: none;
+        }
+
+        /* Main Container */
+        .container {
+            max-width: 1800px;
+            margin: 0 auto;
+        }
+
+        /* Chrome Warning Banner */
+        .chrome-warning {
+            background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);
+            color: #1a1a1a;
+            padding: 18px 32px;
+            border-radius: 16px;
+            margin-bottom: 32px;
+            font-size: 15px;
+            font-weight: 600;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(255, 193, 7, 0.3);
+        }
+
+        .header {
+            background: white;
+            padding: 56px 48px;
+            border-radius: 24px;
+            margin-bottom: 32px;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+        }
+
+        .header h1 {
+            font-size: 48px;
+            font-weight: 800;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 12px;
+            letter-spacing: -1px;
+        }
+
+        .header p {
+            font-size: 18px;
+            color: #6c757d;
+        }
+
+        /* Brand Cards Grid - BIGGER TILES */
+        .brand-sections {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 32px;
+            margin-bottom: 32px;
+        }
+
+        .brand-card {
+            background: white;
+            border-radius: 20px;
+            overflow: hidden;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+            transition: all 0.3s ease;
+            border: 1px solid #e8e8e8;
+        }
+
+        .brand-card:hover {
+            transform: translateY(-6px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12);
+        }
+
+        /* Brand Headers */
+        .brand-header {
+            padding: 32px;
+            text-align: center;
+            color: white;
+            font-weight: 700;
+            font-size: 26px;
+            letter-spacing: 1.5px;
+        }
+
+        .brand-card[data-brand="saucony"] .brand-header {
+            background: linear-gradient(135deg, #FF6B35 0%, #FF8E53 100%);
+        }
+
+        .brand-card[data-brand="hoka"] .brand-header {
+            background: linear-gradient(135deg, #00BFFF 0%, #1E90FF 100%);
+        }
+
+        .brand-card[data-brand="puma"] .brand-header {
+            background: linear-gradient(135deg, #ff0000 0%, #cc0000 100%);
+        }
+
+        .brand-card[data-brand="newbalance"] .brand-header {
+            background: linear-gradient(135deg, #e60012 0%, #b8000e 100%);
+        }
+
+        .brand-card[data-brand="asics"] .brand-header {
+            background: linear-gradient(135deg, #0066b2 0%, #004d87 100%);
+        }
+
+        .brand-card[data-brand="brooks"] .brand-header {
+            background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%);
+        }
+
+        .brand-card[data-brand="on"] .brand-header {
+            background: linear-gradient(135deg, #333333 0%, #1a1a1a 100%);
+        }
+
+        /* Brand Links Section */
+        .brand-links {
+            padding: 20px 32px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .brand-link, .instructions-link {
+            padding: 12px 24px;
+            border-radius: 10px;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            display: inline-block;
+        }
+
+        .brand-link {
+            background: white;
+            color: #667eea;
+            border: 2px solid #667eea;
+        }
+
+        .brand-link:hover {
+            background: #667eea;
+            color: white;
+            transform: translateY(-2px);
+        }
+
+        .instructions-link {
+            background: #667eea;
+            color: white;
+            border: 2px solid #667eea;
+            cursor: pointer;
+        }
+
+        .instructions-link:hover {
+            background: #764ba2;
+            border-color: #764ba2;
+            transform: translateY(-2px);
+        }
+
+        /* Instructions Panel */
+        .instructions-panel {
+            padding: 28px 32px;
+            background: #fffbf0;
+            border-left: 5px solid #ffc107;
+            display: none;
+            margin: 0;
+        }
+
+        .instructions-panel h4 {
+            font-size: 17px;
+            font-weight: 700;
+            color: #856404;
+            margin-bottom: 16px;
+        }
+
+        .instructions-panel ol {
+            margin: 0;
+            padding-left: 24px;
+        }
+
+        .instructions-panel li {
+            color: #856404;
+            font-size: 15px;
+            line-height: 2;
+            margin-bottom: 10px;
+        }
+
+        .instructions-panel a {
+            color: #667eea;
+            font-weight: 600;
+            text-decoration: none;
+        }
+
+        .instructions-panel a:hover {
+            text-decoration: underline;
+        }
+
+        .instructions-panel strong {
+            color: #1a1a1a;
+        }
+
+        /* Copy Links Section */
+        .copy-links-section {
+            margin-top: 20px;
+            padding: 20px;
+            background: white;
+            border-radius: 12px;
+            border: 2px dashed #667eea;
+        }
+
+        .copy-links-section h5 {
+            font-size: 15px;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin-bottom: 12px;
+        }
+
+        .link-list {
+            max-height: 200px;
+            overflow-y: auto;
+            background: #f8f9fa;
+            padding: 16px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            color: #495057;
+            margin-bottom: 12px;
+            line-height: 1.8;
+        }
+
+        .copy-btn {
+            width: 100%;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .copy-btn:hover {
+            background: #764ba2;
+        }
+
+        .copy-btn.copied {
+            background: #28a745;
+        }
+
+        /* Drop Zone - BIGGER */
+        .drop-zone {
+            border: 3px dashed #cbd5e0;
+            border-radius: 16px;
+            padding: 60px 40px;
+            text-align: center;
+            background: #f8f9fa;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin: 32px;
+        }
+
+        .drop-zone:hover {
+            border-color: #667eea;
+            background: #f0f2ff;
+        }
+
+        .drop-zone.dragover {
+            border-color: #28a745;
+            background: #e8f5e9;
+        }
+
+        .drop-zone h3 {
+            font-size: 20px;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin-bottom: 10px;
+        }
+
+        .drop-zone p {
+            color: #6c757d;
+            font-size: 15px;
+        }
+
+        .drop-zone .csv-note {
+            margin-top: 16px;
+            padding: 12px;
+            background: #fff3cd;
+            border-radius: 10px;
+            font-size: 14px;
+            color: #856404;
+            font-weight: 600;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        /* Uploaded File */
+        .uploaded-file {
+            background: #28a745;
+            border-radius: 14px;
+            padding: 20px 28px;
+            margin: 0 32px 28px 32px;
+            display: none;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+        }
+
+        .uploaded-file-info {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            color: white;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .uploaded-file-info strong {
+            font-size: 15px;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .clear-btn {
+            background: rgba(255, 255, 255, 0.25);
+            border: 2px solid rgba(255, 255, 255, 0.4);
+            border-radius: 10px;
+            padding: 10px 22px;
+            color: white;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s ease;
+            font-size: 14px;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .clear-btn:hover {
+            background: rgba(255, 255, 255, 0.35);
+        }
+
+        /* Convert Button - BIGGER */
+        .convert-section {
+            display: none;
+            margin: 0 32px 32px 32px;
+        }
+
+        .convert-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 14px;
+            padding: 20px;
+            font-size: 17px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .convert-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.35);
+        }
+
+        /* Status Messages */
+        .status {
+            padding: 18px 28px;
+            margin: 0 32px 32px 32px;
+            border-radius: 12px;
+            display: none;
+            font-weight: 600;
+            font-size: 15px;
+        }
+
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 2px solid #c3e6cb;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 2px solid #f5c6cb;
+        }
+
+        /* Download Section */
+        .download-section {
+            background: white;
+            border-radius: 24px;
+            padding: 48px;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+            display: none;
+        }
+
+        .download-section h2 {
+            font-size: 32px;
+            font-weight: 800;
+            color: #1a1a1a;
+            margin-bottom: 32px;
+        }
+
+        .download-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 20px;
+            margin-bottom: 48px;
+        }
+
+        .download-btn {
+            background: white;
+            border: 2px solid #dee2e6;
+            border-radius: 14px;
+            padding: 22px 28px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            font-weight: 700;
+            font-size: 16px;
+            text-align: center;
+        }
+
+        .download-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+        }
+
+        /* Brand-specific download button colors */
+        .download-btn.saucony { color: #FF6B35; border-color: #FF6B35; }
+        .download-btn.saucony:hover { background: #fff5f2; }
+        .download-btn.hoka { color: #00BFFF; border-color: #00BFFF; }
+        .download-btn.hoka:hover { background: #f0f9ff; }
+        .download-btn.puma { color: #ff0000; border-color: #ff0000; }
+        .download-btn.puma:hover { background: #fff0f0; }
+        .download-btn.newbalance { color: #e60012; border-color: #e60012; }
+        .download-btn.newbalance:hover { background: #fff0f0; }
+        .download-btn.asics { color: #0066b2; border-color: #0066b2; }
+        .download-btn.asics:hover { background: #f0f7ff; }
+        .download-btn.brooks { color: #1e40af; border-color: #1e40af; }
+        .download-btn.brooks:hover { background: #eff6ff; }
+        .download-btn.on { color: #333333; border-color: #333333; }
+        .download-btn.on:hover { background: #f5f5f5; }
+
+        /* Unified Section */
+        .unified-section {
+            border-top: 2px solid #e9ecef;
+            padding-top: 40px;
+            margin-top: 32px;
+        }
+
+        .unified-btn {
+            width: 100%;
+            background: linear-gradient(135deg, #28a745 0%, #34ce57 100%);
+            color: white;
+            border: none;
+            border-radius: 14px;
+            padding: 24px;
+            font-size: 19px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .unified-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(40, 167, 69, 0.35);
+        }
+
+        .unified-info {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            font-size: 15px;
+            color: #495057;
+            text-align: center;
+            font-weight: 500;
+        }
+
+        /* Responsive */
+        @media (max-width: 1400px) {
+            .brand-sections {
+                grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            }
+        }
+
+        @media (max-width: 768px) {
+            body {
+                padding: 16px;
+            }
+
+            .brand-sections {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 36px;
+            }
+
+            .drop-zone {
+                padding: 40px 24px;
+            }
+        }
+
+        /* Animations */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .status, .instructions-panel {
+            animation: fadeIn 0.3s ease;
+        }
+    </style>
+</head>
+<body>
+    <!-- Password Screen -->
+    <div id="password-screen">
+        <div class="password-box">
+            <h2>Secure Access</h2>
+            <p>Enter your password to access the inventory manager</p>
+            <input 
+                type="password" 
+                id="password-input" 
+                class="password-input" 
+                placeholder="Enter password"
+                autocomplete="off"
+            >
+            <button onclick="checkPassword()" class="password-submit">
+                Unlock
+            </button>
+            <div id="password-error" class="password-error">
+                Incorrect password. Please try again.
+            </div>
+        </div>
+    </div>
+
+    <!-- Main App Content -->
+    <div id="app-content">
+        <div class="container">
+            <!-- Chrome Warning -->
+            <div class="chrome-warning">
+                ⚠️ IMPORTANT: You must use Google Chrome browser to run the ASICS, Brooks, and ON Running scrapers
+            </div>
+
+            <div class="header">
+                <h1>Run House Inventory Manager</h1>
+                <p>Professional inventory conversion for Shopify</p>
+            </div>
+
+            <div class="brand-sections">
+                <!-- Saucony Section -->
+                <div class="brand-card" data-brand="saucony">
+                    <div class="brand-header">
+                        <h2>SAUCONY</h2>
+                    </div>
+                    <div class="brand-links">
+                        <a href="https://login.orderwwwbrands.com/auth/login" target="_blank" class="brand-link">Visit B2B Portal</a>
+                        <button class="instructions-link" onclick="toggleInstructions('saucony')">Instructions</button>
+                    </div>
+                    <div class="instructions-panel" id="saucony-instructions">
+                        <h4>How to Download Saucony Inventory:</h4>
+                        <ol>
+                            <li>Go to <a href="https://login.orderwwwbrands.com/auth/login" target="_blank">Saucony B2B Portal</a></li>
+                            <li>Click on the <strong>menu</strong> in the top left corner, then click on <strong>Lists</strong></li>
+                            <li>On the lists page, click on <strong>Needham Demo Inventory</strong></li>
+                            <li>Click on the <strong>three dots</strong> next to Create Order</li>
+                            <li>Click <strong>Export ATS</strong></li>
+                            <li>Wait for file to download, then drag and drop it to this converter</li>
+                        </ol>
+                    </div>
+                    <div class="drop-zone" id="saucony-dropzone">
+                        <h3>Drop Saucony file here</h3>
+                        <p>or click to browse</p>
+                        <input type="file" class="file-input" id="saucony-file" accept=".xlsx,.xls,.csv">
+                    </div>
+                    <div class="uploaded-file" id="saucony-uploaded">
+                        <div class="uploaded-file-info">
+                            <strong id="saucony-filename"></strong>
+                        </div>
+                        <button class="clear-btn" onclick="clearFile('saucony')">Clear</button>
+                    </div>
+                    <div class="convert-section" id="saucony-convert">
+                        <button class="convert-btn" onclick="convertBrand('saucony')">
+                            Generate Inventory
+                        </button>
+                    </div>
+                    <div class="status" id="saucony-status"></div>
+                </div>
+
+                <!-- HOKA Section -->
+                <div class="brand-card" data-brand="hoka">
+                    <div class="brand-header">
+                        <h2>HOKA</h2>
+                    </div>
+                    <div class="brand-links">
+                        <a href="https://hokaus.deckersb2b.deckers.com/#/" target="_blank" class="brand-link">Visit B2B Portal</a>
+                        <button class="instructions-link" onclick="toggleInstructions('hoka')">Instructions</button>
+                    </div>
+                    <div class="instructions-panel" id="hoka-instructions">
+                        <h4>How to Download HOKA Inventory:</h4>
+                        <ol>
+                            <li>Go to <a href="https://hokaus.deckersb2b.deckers.com/#/" target="_blank">HOKA B2B Portal</a></li>
+                            <li>Click on <strong>Reports</strong> in the header</li>
+                            <li>Download <strong>ATS Report</strong></li>
+                            <li>This should go to the Needham email - use this file</li>
+                        </ol>
+                    </div>
+                    <div class="drop-zone" id="hoka-dropzone">
+                        <h3>Drop HOKA file here</h3>
+                        <p>or click to browse</p>
+                        <input type="file" class="file-input" id="hoka-file" accept=".xlsx,.xls,.csv">
+                    </div>
+                    <div class="uploaded-file" id="hoka-uploaded">
+                        <div class="uploaded-file-info">
+                            <strong id="hoka-filename"></strong>
+                        </div>
+                        <button class="clear-btn" onclick="clearFile('hoka')">Clear</button>
+                    </div>
+                    <div class="convert-section" id="hoka-convert">
+                        <button class="convert-btn" onclick="convertBrand('hoka')">
+                            Generate Inventory
+                        </button>
+                    </div>
+                    <div class="status" id="hoka-status"></div>
+                </div>
+
+                <!-- Puma Section -->
+                <div class="brand-card" data-brand="puma">
+                    <div class="brand-header">
+                        <h2>PUMA</h2>
+                    </div>
+                    <div class="brand-links">
+                        <a href="https://pumab2b.com/#explore" target="_blank" class="brand-link">Visit B2B Portal</a>
+                        <button class="instructions-link" onclick="toggleInstructions('puma')">Instructions</button>
+                    </div>
+                    <div class="instructions-panel" id="puma-instructions">
+                        <h4>How to Download Puma Inventory:</h4>
+                        <ol>
+                            <li>Go to <a href="https://pumab2b.com/#explore" target="_blank">Puma B2B Portal</a></li>
+                            <li>Hover over <strong>Manage</strong> on the header and click on <strong>Inventory Report</strong></li>
+                            <li><strong>Uncheck</strong> "Include Future Availability"</li>
+                            <li>Click <strong>Submit</strong> - this will take a minute to load</li>
+                            <li>Retrieve the file and place it here</li>
+                        </ol>
+                    </div>
+                    <div class="drop-zone" id="puma-dropzone">
+                        <h3>Drop Puma file here</h3>
+                        <p>or click to browse</p>
+                        <input type="file" class="file-input" id="puma-file" accept=".xlsx,.xls,.csv">
+                    </div>
+                    <div class="uploaded-file" id="puma-uploaded">
+                        <div class="uploaded-file-info">
+                            <strong id="puma-filename"></strong>
+                        </div>
+                        <button class="clear-btn" onclick="clearFile('puma')">Clear</button>
+                    </div>
+                    <div class="convert-section" id="puma-convert">
+                        <button class="convert-btn" onclick="convertBrand('puma')">
+                            Generate Inventory
+                        </button>
+                    </div>
+                    <div class="status" id="puma-status"></div>
+                </div>
+
+                <!-- New Balance Section -->
+                <div class="brand-card" data-brand="newbalance">
+                    <div class="brand-header">
+                        <h2>NEW BALANCE</h2>
+                    </div>
+                    <div class="brand-links">
+                        <a href="https://newbalanceus.elasticsuite.com/#explore" target="_blank" class="brand-link">Visit B2B Portal</a>
+                        <button class="instructions-link" onclick="toggleInstructions('newbalance')">Instructions</button>
+                    </div>
+                    <div class="instructions-panel" id="newbalance-instructions">
+                        <h4>How to Download New Balance Inventory:</h4>
+                        <ol>
+                            <li>Go to <a href="https://newbalanceus.elasticsuite.com/#explore" target="_blank">New Balance B2B Portal</a></li>
+                            <li>Hover over <strong>Manage</strong> on the header and click on <strong>Inventory Report</strong></li>
+                            <li><strong>Uncheck</strong> "Include Future Availability"</li>
+                            <li>Click <strong>Submit</strong> - this will take a minute to load</li>
+                            <li>Retrieve the file and place it here</li>
+                        </ol>
+                    </div>
+                    <div class="drop-zone" id="newbalance-dropzone">
+                        <h3>Drop New Balance file here</h3>
+                        <p>or click to browse</p>
+                        <input type="file" class="file-input" id="newbalance-file" accept=".xlsx,.xls,.csv">
+                    </div>
+                    <div class="uploaded-file" id="newbalance-uploaded">
+                        <div class="uploaded-file-info">
+                            <strong id="newbalance-filename"></strong>
+                        </div>
+                        <button class="clear-btn" onclick="clearFile('newbalance')">Clear</button>
+                    </div>
+                    <div class="convert-section" id="newbalance-convert">
+                        <button class="convert-btn" onclick="convertBrand('newbalance')">
+                            Generate Inventory
+                        </button>
+                    </div>
+                    <div class="status" id="newbalance-status"></div>
+                </div>
+
+                <!-- ASICS Section -->
+                <div class="brand-card" data-brand="asics">
+                    <div class="brand-header">
+                        <h2>ASICS</h2>
+                    </div>
+                    <div class="brand-links">
+                        <a href="https://b2b.asics.com" target="_blank" class="brand-link">Visit B2B Portal</a>
+                        <button class="instructions-link" onclick="toggleInstructions('asics')">Instructions</button>
+                    </div>
+                    <div class="instructions-panel" id="asics-instructions">
+                        <h4>How to Scrape ASICS Inventory (LONGEST PROCESS):</h4>
+                        <ol>
+                            <li><strong>FIRST:</strong> Copy all the product links below by clicking "Copy All Links"</li>
+                            <li>Go to <a href="https://b2b.asics.com" target="_blank">ASICS B2B Portal</a> (must use Chrome)</li>
+                            <li>Click the <strong>Auto Scrape button</strong> in the top corner</li>
+                            <li>Paste the copied links into the scraper</li>
+                            <li>Select <strong>Inventory Scraper</strong> and leave all settings the same</li>
+                            <li><strong>Note:</strong> This takes the longest - be patient!</li>
+                            <li>When complete, you can either:
+                                <ul>
+                                    <li>Upload the output file directly to Shopify, OR</li>
+                                    <li>Drop it here to combine with other brands for one unified upload</li>
+                                </ul>
+                            </li>
+                        </ol>
+                        <div class="copy-links-section">
+                            <h5>📋 Current ASICS Product Links (will be updated as we add products):</h5>
+                            <div class="link-list" id="asics-links">
+https://b2b.asics.com/orders/100522727/products/1013A142?colorCode=401&deliveryDate=2025-11-18
+https://b2b.asics.com/orders/100530815/products/1011C083?colorCode=100
+https://b2b.asics.com/orders/100530815/products/1013A162?colorCode=600
+https://b2b.asics.com/orders/100530815/products/1013A170?colorCode=100&deliveryDate=2025-11-28
+https://b2b.asics.com/orders/100505730/products/1012B765?colorCode=002&deliveryDate=2025-10-07
+https://b2b.asics.com/orders/100505730/products/1011B958?colorCode=001&deliveryDate=2025-10-06
+https://b2b.asics.com/orders/100505730/products/1011C052?colorCode=001&deliveryDate=2025-10-06
+https://b2b.asics.com/orders/100505730/products/1011B960?colorCode=002&deliveryDate=2025-10-06
+https://b2b.asics.com/orders/100505775/products/1011C056?colorCode=001&deliveryDate=2025-10-07
+https://b2b.asics.com/orders/100505775/products/1012B843?colorCode=001&deliveryDate=2025-10-06
+https://b2b.asics.com/orders/100505775/products/1011B974?colorCode=002&deliveryDate=2025-10-06
+https://b2b.asics.com/orders/100505775/products/1012B765?colorCode=002&deliveryDate=2025-10-07
+https://b2b.asics.com/orders/100505775/products/1012B753?colorCode=001&deliveryDate=2025-10-07
+https://b2b.asics.com/orders/100505775/products/1012B772?colorCode=002&deliveryDate=2025-10-06
+https://b2b.asics.com/orders/100505775/products/1012B838?colorCode=001&deliveryDate=2025-10-06
+https://b2b.asics.com/orders/100505875/products/1011C138?colorCode=300&deliveryDate=2025-10-08
+https://b2b.asics.com/orders/100505875/products/1012B911?colorCode=600&deliveryDate=2025-10-08
+https://b2b.asics.com/orders/100505875/products/1011C025?colorCode=300&deliveryDate=2025-10-08
+https://b2b.asics.com/orders/100505875/products/1011C136?colorCode=300&deliveryDate=2025-10-08
+https://b2b.asics.com/orders/100505875/products/1012B908?colorCode=600&deliveryDate=2025-10-07
+                            </div>
+                            <button class="copy-btn" onclick="copyLinks('asics')">Copy All Links</button>
+                        </div>
+                    </div>
+                    <div class="drop-zone" id="asics-dropzone">
+                        <h3>Drop ASICS CSV here</h3>
+                        <p>Drop the scraper output file</p>
+                        <div class="csv-note">Pre-formatted CSV from scraper</div>
+                        <input type="file" class="file-input" id="asics-file" accept=".csv">
+                    </div>
+                    <div class="uploaded-file" id="asics-uploaded">
+                        <div class="uploaded-file-info">
+                            <strong id="asics-filename"></strong>
+                        </div>
+                        <button class="clear-btn" onclick="clearFile('asics')">Clear</button>
+                    </div>
+                    <div class="convert-section" id="asics-convert">
+                        <button class="convert-btn" onclick="convertBrand('asics')">
+                            Add to Unified
+                        </button>
+                    </div>
+                    <div class="status" id="asics-status"></div>
+                </div>
+
+                <!-- Brooks Section -->
+                <div class="brand-card" data-brand="brooks">
+                    <div class="brand-header">
+                        <h2>BROOKS</h2>
+                    </div>
+                    <div class="brand-links">
+                        <a href="https://fasttrack.brooksrunning.com" target="_blank" class="brand-link">Visit B2B Portal</a>
+                        <button class="instructions-link" onclick="toggleInstructions('brooks')">Instructions</button>
+                    </div>
+                    <div class="instructions-panel" id="brooks-instructions">
+                        <h4>How to Scrape Brooks Inventory (Slightly Quicker than ASICS):</h4>
+                        <ol>
+                            <li><strong>FIRST:</strong> Copy all the product links below by clicking "Copy All Links"</li>
+                            <li>Go to <a href="https://fasttrack.brooksrunning.com" target="_blank">Brooks B2B Portal</a> (must use Chrome)</li>
+                            <li>Click the <strong>Auto Scrape button</strong> in the top corner</li>
+                            <li>Paste the copied links into the scraper</li>
+                            <li>Select <strong>Inventory Scraper</strong> and leave all settings the same</li>
+                            <li>When complete, you can either:
+                                <ul>
+                                    <li>Upload the output file directly to Shopify, OR</li>
+                                    <li>Drop it here to combine with other brands for one unified upload</li>
+                                </ul>
+                            </li>
+                        </ol>
+                        <div class="copy-links-section">
+                            <h5>📋 Current Brooks Product Links (will be updated as we add products):</h5>
+                            <div class="link-list" id="brooks-links">
+                                https://fasttrack.brooksrunning.com/home(overlay:cs/brooks/120468/120468048/9284_41941)?preset=now&sortField=Default&sortDirection=Desc&withRelatedVariants=true&collapse=false
+                                https://fasttrack.brooksrunning.com/home(overlay:cs/brooks/110479/110479091/9284_41941)?preset=now&sortField=Default&sortDirection=Desc&withRelatedVariants=true&collapse=false 
+                                https://fasttrack.brooksrunning.com/home(overlay:cs/brooks/120443/120443032/9284_41941)?preset=now&sortField=Default&sortDirection=Desc&withRelatedVariants=true&collapse=false                               https://fasttrack.brooksrunning.com/browse/search(overlay:cs/brooks/110454/110454410/9284_41941)?q=&f=&start=0&num=25&preset=now&sortField=Default&sortDirection=Desc&collapse=false                               
+                                https://fasttrack.brooksrunning.com/home(overlay:cs/brooks/110454/110454044/9284_41941)?preset=now&sortField=Default&sortDirection=Desc&withRelatedVariants=true&collapse=false                                https://fasttrack.brooksrunning.com/home(overlay:cs/brooks/120443/120443032/9284_41941)?preset=now&sortField=Default&sortDirection=Desc&withRelatedVariants=true&collapse=false
+https://fasttrack.brooksrunning.com/home(overlay:cs/brooks/120431/120431070/9284_41941)
+https://fasttrack.brooksrunning.com/browse/search(overlay:cs/brooks/110442/110442297/9284_41941)?q=ghost%2017&f=&start=0&num=25&preset=now&sortField=Default&sortDirection=Desc&collapse=false
+https://fasttrack.brooksrunning.com/home(overlay:cs/brooks/110464/110464417/9284_41941)
+https://fasttrack.brooksrunning.com/home(overlay:cs/brooks/120457/120457043/9284_41941)
+https://fasttrack.brooksrunning.com/home(overlay:cs/brooks/110445/110445002/9284_41941)
+https://fasttrack.brooksrunning.com/home(overlay:cs/brooks/120434/120434110/9284_41941)
+https://fasttrack.brooksrunning.com/home(overlay:cs/brooks/110446/110446078/9284_41941)
+https://fasttrack.brooksrunning.com/home(overlay:cs/brooks/120435/120435090/9284_41941)
+https://fasttrack.brooksrunning.com/browse/search(overlay:cs/brooks/120426/120426137/9284_41941)?q=Adrenaline%20GTS%2024&f=&start=0&num=25&preset=now&sortField=Default&sortDirection=Desc&collapse=false
+https://fasttrack.brooksrunning.com/browse/search(overlay:cs/brooks/110437/110437346/9284_41941)?q=Adrenaline%20GTS%2024&f=&start=0&num=25&preset=now&sortField=Default&sortDirection=Desc&collapse=false
+https://fasttrack.brooksrunning.com/browse/search(overlay:cs/brooks/110438/110438033/9284_41941)?q=Adrenaline%20GTS%2024&f=&start=0&num=25&preset=now&sortField=Default&sortDirection=Desc&collapse=false
+https://fasttrack.brooksrunning.com/browse/search(overlay:cs/brooks/120427/120427044/9284_41941)?q=Adrenaline%20GTS%2024&f=&start=0&num=25&preset=now&sortField=Default&sortDirection=Desc&collapse=false
+                            </div>
+                            <button class="copy-btn" onclick="copyLinks('brooks')">Copy All Links</button>
+                        </div>
+                    </div>
+                    <div class="drop-zone" id="brooks-dropzone">
+                        <h3>Drop Brooks CSV here</h3>
+                        <p>Drop the scraper output file</p>
+                        <div class="csv-note">Pre-formatted CSV from scraper</div>
+                        <input type="file" class="file-input" id="brooks-file" accept=".csv">
+                    </div>
+                    <div class="uploaded-file" id="brooks-uploaded">
+                        <div class="uploaded-file-info">
+                            <strong id="brooks-filename"></strong>
+                        </div>
+                        <button class="clear-btn" onclick="clearFile('brooks')">Clear</button>
+                    </div>
+                    <div class="convert-section" id="brooks-convert">
+                        <button class="convert-btn" onclick="convertBrand('brooks')">
+                            Add to Unified
+                        </button>
+                    </div>
+                    <div class="status" id="brooks-status"></div>
+                </div>
+
+                <!-- ON Running Section -->
+                <div class="brand-card" data-brand="on">
+                    <div class="brand-header">
+                        <h2>ON RUNNING</h2>
+                    </div>
+                    <div class="brand-links">
+                        <a href="https://www.on-running.com" target="_blank" class="brand-link">Visit Website</a>
+                        <button class="instructions-link" onclick="toggleInstructions('on')">Instructions</button>
+                    </div>
+                    <div class="instructions-panel" id="on-instructions">
+                        <h4>ON Running Instructions:</h4>
+                        <ol>
+                            <li>Use Chrome browser to run the ON scraper</li>
+                            <li>Download your pre-formatted ON inventory CSV from the scraper</li>
+                            <li>You can either:
+                                <ul>
+                                    <li>Upload the output file directly to Shopify, OR</li>
+                                    <li>Drop it here to combine with other brands for one unified upload</li>
+                                </ul>
+                            </li>
+                        </ol>
+                    </div>
+                    <div class="drop-zone" id="on-dropzone">
+                        <h3>Drop ON CSV here</h3>
+                        <p>Drop the scraper output file</p>
+                        <div class="csv-note">Pre-formatted CSV from scraper</div>
+                        <input type="file" class="file-input" id="on-file" accept=".csv">
+                    </div>
+                    <div class="uploaded-file" id="on-uploaded">
+                        <div class="uploaded-file-info">
+                            <strong id="on-filename"></strong>
+                        </div>
+                        <button class="clear-btn" onclick="clearFile('on')">Clear</button>
+                    </div>
+                    <div class="convert-section" id="on-convert">
+                        <button class="convert-btn" onclick="convertBrand('on')">
+                            Add to Unified
+                        </button>
+                    </div>
+                    <div class="status" id="on-status"></div>
+                </div>
+            </div>
+
+            <!-- Download Section -->
+            <div class="download-section" id="download-section">
+                <h2>Download Inventories</h2>
+                <div class="download-grid" id="individual-downloads"></div>
+
+                <div class="unified-section">
+                    <h2>Combined Inventory</h2>
+                    <button class="unified-btn" onclick="downloadUnified()">
+                        Download All Brands
+                    </button>
+                    <div class="unified-info" id="unified-info"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const CORRECT_PASSWORD = "runhouse15west";
+
+        function checkPassword() {
+            const input = document.getElementById('password-input');
+            const error = document.getElementById('password-error');
+            
+            if (input.value === CORRECT_PASSWORD) {
+                document.getElementById('password-screen').style.display = 'none';
+                document.getElementById('app-content').style.display = 'block';
+                sessionStorage.setItem('authenticated', 'true');
+            } else {
+                error.style.display = 'block';
+                input.value = '';
+                input.focus();
+                document.querySelector('.password-box').style.animation = 'shake 0.5s';
+                setTimeout(() => document.querySelector('.password-box').style.animation = '', 500);
+            }
+        }
+
+        function toggleInstructions(brand) {
+            const panel = document.getElementById(`${brand}-instructions`);
+            const isVisible = panel.style.display === 'block';
+            
+            document.querySelectorAll('.instructions-panel').forEach(p => p.style.display = 'none');
+            
+            if (!isVisible) {
+                panel.style.display = 'block';
+            }
+        }
+
+        function copyLinks(brand) {
+            const linksDiv = document.getElementById(`${brand}-links`);
+            const text = linksDiv.textContent.trim();
+            
+            navigator.clipboard.writeText(text).then(() => {
+                const btn = event.target;
+                const originalText = btn.textContent;
+                btn.textContent = '✓ Copied!';
+                btn.classList.add('copied');
+                
+                setTimeout(() => {
+                    btn.textContent = originalText;
+                    btn.classList.remove('copied');
+                }, 2000);
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const input = document.getElementById('password-input');
+            if (input) {
+                input.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') checkPassword();
+                });
+                input.focus();
+            }
+
+            if (sessionStorage.getItem('authenticated') === 'true') {
+                document.getElementById('password-screen').style.display = 'none';
+                document.getElementById('app-content').style.display = 'block';
+            }
+        });
+    </script>
+
+    <script src="saucony-converter.js"></script>
+    <script src="hoka-converter.js"></script>
+    <script src="puma-converter.js"></script>
+    <script src="newbalance-converter.js"></script>
+    <script src="main.js"></script>
+</body>
+</html>

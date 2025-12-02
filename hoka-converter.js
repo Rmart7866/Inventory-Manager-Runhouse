@@ -1,0 +1,385 @@
+// HOKA Converter Logic - FIXED with Future Inventory Filtering
+const HokaConverter = {
+    inventoryData: [],
+    
+    isAvailableNow(availableDateStr) {
+        // Check if the available date is today or in the past
+        if (!availableDateStr) return true; // If no date provided, assume available
+        
+        try {
+            // Parse the date string (format: MM/DD/YYYY)
+            const [month, day, year] = availableDateStr.toString().split('/').map(num => parseInt(num));
+            const availableDate = new Date(year, month - 1, day); // month is 0-indexed in JS
+            
+            // Get today's date at midnight for comparison
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            // Only include if available date is today or earlier
+            return availableDate <= today;
+        } catch (e) {
+            // If we can't parse the date, assume it's available to be safe
+            console.warn('Could not parse available date:', availableDateStr);
+            return true;
+        }
+    },
+    
+    productInfo: {
+        'Mach 6': {
+            description: 'Behold the lightest, most responsive Mach to date. This lively trainer has been fine-tuned for extra energy return with a super critical foam midsole and updated for enhanced durability with strategic rubber coverage in the outsole.',
+            specs: { stack: '37/32mm', drop: '5mm', weight: '8.1 oz' },
+            features: ['Lightweight design', 'Responsive cushioning', 'Daily trainer', 'Tempo runs'],
+            category: 'neutral daily trainer',
+            bestFor: 'Daily training, tempo runs, 5K to half marathon races'
+        },
+        'Mach X 3': {
+            description: 'A plated daily trainer that brings the heat to speedwork. Built for up-tempo training miles with an extra-resilient PEBA-topped midsole and snappy Pebax® plate.',
+            specs: { stack: '38/33mm', drop: '5mm', weight: '10.2 oz' },
+            features: ['Carbon plate', 'PEBA midsole', 'Speed training', 'Race day ready'],
+            category: 'plated performance trainer',
+            bestFor: 'Speed workouts, tempo runs, race day from 5K to marathon'
+        },
+        'Skyward X': {
+            description: 'Pushing soft and smooth to the extreme, this cushy trainer features a revolutionary suspension system with a convex carbon fiber plate.',
+            specs: { stack: '48/43mm', drop: '5mm', weight: '11.3 oz' },
+            features: ['Max cushioning', 'Carbon fiber plate', 'Suspension system', 'Long runs'],
+            category: 'max cushion trainer',
+            bestFor: 'Long runs, recovery runs, ultra-distance training'
+        },
+        'Clifton 10': {
+            description: 'A trusted trainer for daily maintenance miles. Ushering in a new era of plush performance with additional heel-to-toe drop.',
+            specs: { stack: '42/34mm', drop: '8mm', weight: '9.7 oz' },
+            features: ['Plush cushioning', 'Neutral support', 'Daily miles', 'Versatile trainer'],
+            category: 'neutral cushioned trainer',
+            bestFor: 'Daily training, easy runs, long runs, walking'
+        },
+        'Bondi 9': {
+            description: 'One of the hardest working shoes in the HOKA lineup. Delivers peak plushness for everyday miles with increased stack height.',
+            specs: { stack: '43/38mm', drop: '5mm', weight: '10.5 oz' },
+            features: ['Maximum cushioning', 'High stack height', 'Recovery runs', 'All-day comfort'],
+            category: 'max cushion trainer',
+            bestFor: 'Recovery runs, easy miles, walking, all-day wear'
+        },
+        'Arahi 8': {
+            description: 'Anything but your average stability shoe. Features enhanced H-frame™ technology for combating overpronation.',
+            specs: { stack: '39/31mm', drop: '8mm', weight: '9.8 oz' },
+            features: ['Stability support', 'H-Frame technology', 'Overpronation control', 'Daily trainer'],
+            category: 'stability trainer',
+            bestFor: 'Daily training for overpronators, long runs, marathon training'
+        },
+        'Skyflow': {
+            description: 'Designed to elevate your daily running practice. Combines premium geometry with upgraded foam compounds.',
+            specs: { stack: '40/35mm', drop: '5mm', weight: '10 oz' },
+            features: ['Balanced cushioning', 'Smooth ride', 'Daily versatility', 'Premium foam'],
+            category: 'neutral daily trainer',
+            bestFor: 'Daily training, base miles, tempo runs'
+        }
+    },
+    
+    allowedProducts: ['Mach 6', 'Mach X 3', 'Skyward X', 'Clifton 10', 'Bondi 9', 'Arahi 8', 'Skyflow'],
+    
+    isAllowedProduct(productName) {
+        if (!productName) return false;
+        let nameLower = productName.toLowerCase();
+        
+        // Strip width indicators from product name before matching
+        nameLower = nameLower.replace(/ wide$/, '').replace(/ x-wide$/, '');
+        
+        if (nameLower.includes('arahi')) {
+            return nameLower.includes('arahi 8') || nameLower.includes('arahi8');
+        }
+        return this.allowedProducts.some(allowed => {
+            const allowedLower = allowed.toLowerCase();
+            return nameLower.includes(allowedLower) || 
+                   nameLower.includes(allowedLower.replace(/\s+/g, ''));
+        });
+    },
+    
+    getMatchingProduct(productName) {
+        if (!productName) return null;
+        let nameLower = productName.toLowerCase();
+        
+        // Strip width indicators from product name before matching
+        nameLower = nameLower.replace(/ wide$/, '').replace(/ x-wide$/, '');
+        
+        if (nameLower.includes('arahi')) {
+            if (nameLower.includes('arahi 8') || nameLower.includes('arahi8')) {
+                return 'Arahi 8';
+            }
+            return null;
+        }
+        for (const allowed of this.allowedProducts) {
+            const allowedLower = allowed.toLowerCase();
+            if (nameLower.includes(allowedLower) || 
+                nameLower.includes(allowedLower.replace(/\s+/g, ''))) {
+                return allowed;
+            }
+        }
+        return null;
+    },
+    
+    formatGender(division) {
+        if (!division) return '';
+        const divStr = division.toString().trim();
+        // Keep the apostrophe for handle generation
+        if (divStr.toLowerCase() === "women's" || divStr.toLowerCase() === "womens") return "Women's";
+        if (divStr.toLowerCase() === "men's" || divStr.toLowerCase() === "mens") return "Men's";
+        if (divStr.toLowerCase() === "youth" || divStr.toLowerCase() === "kids") return 'Youth';
+        if (divStr.toLowerCase() === "unisex") return 'Unisex';
+        // Return original if no match
+        return divStr;
+    },
+    
+    async convert(file) {
+        try {
+            let data = [];
+            
+            if (file.name.toLowerCase().endsWith('.xlsx') || 
+                file.name.toLowerCase().endsWith('.xls')) {
+                const arrayBuffer = await file.arrayBuffer();
+                const workbook = XLSX.read(arrayBuffer);
+                const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+                data = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+            } else {
+                const text = await file.text();
+                const parseResult = Papa.parse(text, {
+                    delimiter: '\t',
+                    header: false,
+                    skipEmptyLines: true,
+                    dynamicTyping: true
+                });
+                data = parseResult.data;
+            }
+            
+            // Skip header row if it exists
+            let startIdx = 0;
+            if (data.length > 0 && data[0][0] === 'Division') {
+                startIdx = 1;
+            }
+            
+            const filteredProducts = data.slice(startIdx).filter(row => {
+                if (!row || row.length < 10) return false;
+                const productName = row[5]; // Style Name column
+                const division = row[0]; // Division/Gender column
+                
+                // Skip youth products
+                if (division && (division.toString().trim().toLowerCase() === 'youth' || 
+                               division.toString().trim().toLowerCase() === 'kids' ||
+                               division.toString().trim().toUpperCase() === 'Y')) {
+                    return false;
+                }
+                
+                return this.isAllowedProduct(productName);
+            });
+            
+            const processedVariants = new Map();
+            
+            for (let i = 0; i < filteredProducts.length; i++) {
+                const product = filteredProducts[i];
+                
+                const division = product[0];  // Gender/Division
+                const productName = product[5];  // Style Name
+                const colorway = product[6];  // Style Colorway
+                const styleSKU = product[7];  // Style SKU
+                const sizeInfo = product[8];  // Size
+                const variantSKU = product[9];  // Variant SKU
+                const upc = product[10];  // UPC
+                const availableDate = product[11];  // Available date (column 11) - ADDED!
+                const quantity = product[12];  // Quantity
+                const retail = product[14];  // MSRP
+                
+                // CRITICAL FIX: Skip this variant if it's not available yet (future inventory)
+                if (!this.isAvailableNow(availableDate)) {
+                    continue; // Skip future inventory
+                }
+                
+                const matchingProduct = this.getMatchingProduct(productName);
+                if (!matchingProduct) continue;
+                
+                const formattedGender = this.formatGender(division);
+                
+                let size = sizeInfo ? sizeInfo.toString().replace(/[A-Z]/g, '') : '';
+                if (size) {
+                    size = size.replace(/^0/, '');
+                    if (!size.includes('.')) {
+                        size = size + '.0';
+                    }
+                }
+                
+                let width = 'Regular';
+                if (variantSKU && sizeInfo) {
+                    const skuUpper = variantSKU.toUpperCase();
+                    const isWomen = formattedGender === "Women's";
+                    
+                    const sizeStr = sizeInfo.toString().toUpperCase();
+                    
+                    if (isWomen) {
+                        // Women's widths: B=Regular, D=Wide, EE=Extra Wide (2E)
+                        if (sizeStr.includes('EE') || sizeStr.includes('2E')) {
+                            width = 'Extra Wide';
+                        } else if (sizeStr.endsWith('D') || sizeStr.includes('D ')) {
+                            width = 'Wide';
+                        } else if (skuUpper.includes('EE') || skuUpper.includes('2E')) {
+                            width = 'Extra Wide';
+                        } else if (skuUpper.match(/\d+\.?\d*D$/i) || skuUpper.includes('-D-') || skuUpper.endsWith('-D')) {
+                            width = 'Wide';
+                        }
+                    } else {
+                        // Men's widths: D=Regular, EE=Wide (2E), EEEE=Extra Wide (4E)
+                        if (sizeStr.includes('EEEE') || skuUpper.includes('EEEE')) {
+                            width = 'Extra Wide';
+                        } else if (sizeStr.includes('EE') || sizeStr.includes('2E') || skuUpper.includes('EE') || skuUpper.includes('2E')) {
+                            width = 'Wide';
+                        }
+                    }
+                }
+                
+                const variantKey = `${formattedGender}-${matchingProduct}-${colorway}-${size}-${width}`;
+                
+                let actualQuantity = 0;
+                if (typeof quantity === 'string') {
+                    if (quantity.includes('+')) {
+                        actualQuantity = parseInt(quantity.replace('+', '')) || 100;
+                    } else {
+                        actualQuantity = parseInt(quantity) || 0;
+                    }
+                } else if (typeof quantity === 'number') {
+                    actualQuantity = quantity;
+                }
+                
+                if (processedVariants.has(variantKey)) {
+                    const existing = processedVariants.get(variantKey);
+                    existing.quantity += actualQuantity;
+                    continue;
+                }
+                
+                processedVariants.set(variantKey, {
+                    division,
+                    gender: formattedGender,
+                    productName,
+                    matchingProduct,
+                    colorway,
+                    styleSKU,
+                    size,
+                    width,
+                    variantSKU,
+                    upc,
+                    quantity: actualQuantity,
+                    retail: retail
+                });
+            }
+            
+            const sortedVariants = Array.from(processedVariants.entries()).sort((a, b) => {
+                const [keyA, dataA] = a;
+                const [keyB, dataB] = b;
+                
+                if (dataA.matchingProduct !== dataB.matchingProduct) {
+                    return dataA.matchingProduct.localeCompare(dataB.matchingProduct);
+                }
+                
+                if (dataA.gender !== dataB.gender) {
+                    if (dataA.gender === "Men's") return -1;
+                    if (dataB.gender === "Men's") return 1;
+                    return dataA.gender.localeCompare(dataB.gender);
+                }
+                
+                if (dataA.colorway !== dataB.colorway) {
+                    return dataA.colorway.localeCompare(dataB.colorway);
+                }
+                
+                if (dataA.width !== dataB.width) {
+                    if (dataA.width === 'Regular') return -1;
+                    if (dataB.width === 'Regular') return 1;
+                    return dataA.width.localeCompare(dataB.width);
+                }
+                
+                const sizeA = parseFloat(dataA.size) || 0;
+                const sizeB = parseFloat(dataB.size) || 0;
+                return sizeA - sizeB;
+            });
+            
+            const shopifyInventory = [];
+            
+            for (const [variantKey, variantData] of sortedVariants) {
+                const productTitle = 'HOKA ' + variantData.gender + ' ' + variantData.matchingProduct + ' - ' + variantData.colorway;
+                
+                const baseHandle = (variantData.gender + '-' + variantData.matchingProduct + '-' + variantData.colorway)
+                    .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+                
+                const hasWidth = variantData.width !== 'Regular';
+                const handle = baseHandle + (hasWidth ? '-' + variantData.width.toLowerCase().replace(/\s+/g, '-') : '');
+                
+                shopifyInventory.push({
+                    Handle: handle,
+                    Title: productTitle + (hasWidth ? ' (' + variantData.width + ')' : ''),
+                    'Option1 Name': 'Size',
+                    'Option1 Value': variantData.size,
+                    'Option2 Name': '',
+                    'Option2 Value': '',
+                    'Option3 Name': '',
+                    'Option3 Value': '',
+                    SKU: variantData.variantSKU,
+                    Barcode: variantData.upc || '',
+                    'HS Code': '',
+                    COO: '',
+                    Location: 'Needham',
+                    'Bin name': '',
+                    'Incoming (not editable)': '',
+                    'Unavailable (not editable)': '',
+                    'Committed (not editable)': '',
+                    'Available (not editable)': '',
+                    'On hand (current)': '',
+                    'On hand (new)': variantData.quantity
+                });
+            }
+            
+            this.inventoryData = shopifyInventory;
+            return shopifyInventory;
+            
+        } catch (error) {
+            console.error('HOKA conversion error:', error);
+            throw error;
+        }
+    },
+    
+    generateInventoryCSV() {
+        // IMPROVED: Use Papa Parse for proper CSV generation instead of manual string building
+        if (typeof Papa !== 'undefined') {
+            return Papa.unparse(this.inventoryData, {
+                quotes: true,
+                quoteChar: '"',
+                delimiter: ','
+            });
+        }
+        
+        // Fallback to manual generation if Papa Parse not available
+        const inventoryHeaders = ['Handle', 'Title', 'Option1 Name', 'Option1 Value', 'Option2 Name', 'Option2 Value', 
+                       'Option3 Name', 'Option3 Value', 'SKU', 'Barcode', 'HS Code', 'COO', 'Location', 'Bin name', 
+                       'Incoming (not editable)', 'Unavailable (not editable)', 'Committed (not editable)', 
+                       'Available (not editable)', 'On hand (current)', 'On hand (new)'];
+        
+        const csvRows = [inventoryHeaders.join(',')];
+        
+        this.inventoryData.forEach(row => {
+            const csvRow = [
+                row.Handle,
+                `"${row.Title.replace(/"/g, '""')}"`, // Properly escape quotes in title
+                row['Option1 Name'],
+                row['Option1 Value'],
+                row['Option2 Name'] || '',
+                row['Option2 Value'] || '',
+                row['Option3 Name'] || '',
+                row['Option3 Value'] || '',
+                row.SKU,
+                row.Barcode || '',
+                '', '',
+                row.Location,
+                '', '', '', '', '', '',
+                row['On hand (new)']
+            ];
+            csvRows.push(csvRow.join(','));
+        });
+        
+        return csvRows.join('\n');
+    }
+};
