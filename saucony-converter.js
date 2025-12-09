@@ -1,4 +1,4 @@
-// Saucony Converter Logic
+// Saucony Converter Logic - FIXED VERSION
 const SauconyConverter = {
     productsData: [],
     inventoryData: [],
@@ -240,7 +240,14 @@ const SauconyConverter = {
             const gender = product[4];
             const width = product[7] || 'M';
             
+            // Skip header rows
             if (!productName || productName.toString().toLowerCase().includes('product name')) {
+                continue;
+            }
+            
+            // ===== FIX #1: FILTER OUT NON-STANDARD WIDTHS =====
+            // Only process standard width (M) shoes - skip wide (W, 2E, D, XW, etc.)
+            if (width && width.toString().toUpperCase() !== 'M') {
                 continue;
             }
             
@@ -252,17 +259,21 @@ const SauconyConverter = {
             let genderPrefix = '';
             let sizeColumns = [];
             
-            if (isEndorphinElite) {
+            // ===== FIX #2: CORRECTED COLUMN MAPPINGS =====
+            // Excel structure: Column 9-23 contains sizes for ALL shoes
+            // Women's: columns represent sizes 5.0-12.0
+            // Men's: same columns represent sizes 7.0-14.0
+            // Unisex: same columns, treated as men's sizing (standard for unisex running shoes)
+            
+            if (isEndorphinElite || (gender && gender.toString().toLowerCase().includes('unisex'))) {
+                // Unisex shoes use men's sizing
                 genderPrefix = "Unisex ";
                 sizeColumns = [
-                    {col: 8, size: "M3.5/W5.0"}, {col: 9, size: "M4.0/W5.5"}, {col: 10, size: "M4.5/W6.0"},
-                    {col: 11, size: "M5.0/W6.5"}, {col: 12, size: "M5.5/W7.0"}, {col: 13, size: "M6.0/W7.5"},
-                    {col: 14, size: "M6.5/W8.0"}, {col: 15, size: "M7.0/W8.5"}, {col: 16, size: "M7.5/W9.0"},
-                    {col: 17, size: "M8.0/W9.5"}, {col: 18, size: "M8.5/W10.0"}, {col: 19, size: "M9.0/W10.5"},
-                    {col: 20, size: "M9.5/W11.0"}, {col: 21, size: "M10.0/W11.5"}, {col: 22, size: "M10.5/W12.0"},
-                    {col: 23, size: "M11.0/W12.5"}, {col: 24, size: "M11.5/W13.0"}, {col: 25, size: "M12.0/W13.5"},
-                    {col: 26, size: "M12.5/W14.0"}, {col: 27, size: "M13.0/W14.5"}, {col: 28, size: "M13.5/W15.0"},
-                    {col: 29, size: "M14.0/W15.5"}
+                    {col: 9, size: "M7.0/W8.5"}, {col: 10, size: "M7.5/W9.0"}, {col: 11, size: "M8.0/W9.5"},
+                    {col: 12, size: "M8.5/W10.0"}, {col: 13, size: "M9.0/W10.5"}, {col: 14, size: "M9.5/W11.0"},
+                    {col: 15, size: "M10.0/W11.5"}, {col: 16, size: "M10.5/W12.0"}, {col: 17, size: "M11.0/W12.5"},
+                    {col: 18, size: "M11.5/W13.0"}, {col: 19, size: "M12.0/W13.5"}, {col: 20, size: "M12.5/W14.0"},
+                    {col: 21, size: "M13.0/W14.5"}, {col: 22, size: "M13.5/W15.0"}, {col: 23, size: "M14.0/W15.5"}
                 ];
             } else if (gender && gender.toString().toLowerCase().includes('women')) {
                 genderPrefix = "Women's ";
@@ -274,13 +285,14 @@ const SauconyConverter = {
                     {col: 21, size: "11.0"}, {col: 22, size: "11.5"}, {col: 23, size: "12.0"}
                 ];
             } else {
+                // Men's shoes - FIXED: Now starts at column 9 instead of 8
                 genderPrefix = "Men's ";
                 sizeColumns = [
-                    {col: 8, size: "7.0"}, {col: 9, size: "7.5"}, {col: 10, size: "8.0"},
-                    {col: 11, size: "8.5"}, {col: 12, size: "9.0"}, {col: 13, size: "9.5"},
-                    {col: 14, size: "10.0"}, {col: 15, size: "10.5"}, {col: 16, size: "11.0"},
-                    {col: 17, size: "11.5"}, {col: 18, size: "12.0"}, {col: 19, size: "12.5"},
-                    {col: 20, size: "13.0"}, {col: 21, size: "14.0"}, {col: 22, size: "15.0"}
+                    {col: 9, size: "7.0"}, {col: 10, size: "7.5"}, {col: 11, size: "8.0"},
+                    {col: 12, size: "8.5"}, {col: 13, size: "9.0"}, {col: 14, size: "9.5"},
+                    {col: 15, size: "10.0"}, {col: 16, size: "10.5"}, {col: 17, size: "11.0"},
+                    {col: 18, size: "11.5"}, {col: 19, size: "12.0"}, {col: 20, size: "12.5"},
+                    {col: 21, size: "13.0"}, {col: 22, size: "13.5"}, {col: 23, size: "14.0"}
                 ];
             }
             
@@ -288,7 +300,7 @@ const SauconyConverter = {
             
             // Determine gender type for handle generation
             let genderType = 'men';
-            if (isEndorphinElite) {
+            if (isEndorphinElite || (gender && gender.toString().toLowerCase().includes('unisex'))) {
                 genderType = 'unisex';
             } else if (gender && gender.toString().toLowerCase().includes('women')) {
                 genderType = 'women';
