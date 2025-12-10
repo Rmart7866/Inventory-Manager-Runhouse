@@ -162,24 +162,70 @@ const BrandConverter = {
         let hasAnyInventory = false;
         let totalVariants = 0;
         
-        ['saucony', 'hoka', 'puma', 'newbalance'].forEach(brand => {
+        ['saucony', 'hoka', 'puma', 'newbalance', 'asics', 'brooks', 'on'].forEach(brand => {
             if (this.brands[brand].inventory.length > 0) {
                 hasAnyInventory = true;
                 totalVariants += this.brands[brand].inventory.length;
                 
+                // Create container for checkbox and button
+                const container = document.createElement('div');
+                container.className = 'download-item';
+                container.style.display = 'flex';
+                container.style.alignItems = 'center';
+                container.style.gap = '12px';
+                container.style.marginBottom = '12px';
+                
+                // Add checkbox for unified selection
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.id = `select-${brand}`;
+                checkbox.className = 'brand-checkbox';
+                checkbox.checked = true;
+                checkbox.style.width = '20px';
+                checkbox.style.height = '20px';
+                checkbox.style.cursor = 'pointer';
+                checkbox.onchange = () => this.updateUnifiedInfo();
+                
+                // Create download button
                 const btn = document.createElement('button');
                 btn.className = `download-btn ${brand}`;
+                btn.style.flex = '1';
                 btn.innerHTML = `📥 ${this.getBrandDisplayName(brand)} (${this.brands[brand].inventory.length} variants)`;
                 btn.onclick = () => this.downloadBrandInventory(brand);
-                individualDownloads.appendChild(btn);
+                
+                container.appendChild(checkbox);
+                container.appendChild(btn);
+                individualDownloads.appendChild(container);
             }
         });
         
         if (hasAnyInventory) {
             downloadSection.style.display = 'block';
-            unifiedInfo.textContent = `Ready to combine ${totalVariants} total variants from all brands`;
+            this.updateUnifiedInfo();
         } else {
             downloadSection.style.display = 'none';
+        }
+    },
+    
+    updateUnifiedInfo() {
+        const unifiedInfo = document.getElementById('unified-info');
+        let selectedVariants = 0;
+        let selectedBrands = [];
+        
+        ['saucony', 'hoka', 'puma', 'newbalance', 'asics', 'brooks', 'on'].forEach(brand => {
+            const checkbox = document.getElementById(`select-${brand}`);
+            if (checkbox && checkbox.checked && this.brands[brand].inventory.length > 0) {
+                selectedVariants += this.brands[brand].inventory.length;
+                selectedBrands.push(this.getBrandDisplayName(brand));
+            }
+        });
+        
+        if (selectedBrands.length === 0) {
+            unifiedInfo.textContent = 'Select brands above to combine';
+            unifiedInfo.style.color = '#6c757d';
+        } else {
+            unifiedInfo.textContent = `Ready to combine ${selectedVariants} variants from ${selectedBrands.join(', ')}`;
+            unifiedInfo.style.color = '#28a745';
         }
     },
     
@@ -363,18 +409,21 @@ async function convertBrand(brand) {
     }
 }
 
-// Download unified inventory - FIXED to match individual converter format exactly
+// Download unified inventory - Only selected brands
 function downloadUnified() {
     const allInventory = [];
+    let selectedBrands = [];
     
     ['saucony', 'hoka', 'puma', 'newbalance', 'asics', 'brooks', 'on'].forEach(brand => {
-        if (BrandConverter.brands[brand].inventory.length > 0) {
+        const checkbox = document.getElementById(`select-${brand}`);
+        if (checkbox && checkbox.checked && BrandConverter.brands[brand].inventory.length > 0) {
             allInventory.push(...BrandConverter.brands[brand].inventory);
+            selectedBrands.push(BrandConverter.getBrandDisplayName(brand));
         }
     });
     
     if (allInventory.length === 0) {
-        alert('Please convert at least one brand first!');
+        alert('Please select at least one brand to download!');
         return;
     }
     
