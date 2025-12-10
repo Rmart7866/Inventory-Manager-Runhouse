@@ -963,30 +963,48 @@ https://fasttrack.brooksrunning.com/browse/search(overlay:cs/brooks/120427/12042
                         <h4>ON Running Instructions:</h4>
                         <ol>
                             <li>Use Chrome browser to run the ON scraper</li>
-                            <li>Download your pre-formatted ON inventory CSV from the scraper</li>
+                            <li>Download your pre-formatted ON inventory CSVs from the scraper (Men's and Women's separate files)</li>
+                            <li>Upload both files below, then click "Combine & Add to Unified"</li>
                             <li>You can either:
                                 <ul>
-                                    <li>Upload the output file directly to Shopify, OR</li>
-                                    <li>Drop it here to combine with other brands for one unified upload</li>
+                                    <li>Download the combined file and upload directly to Shopify, OR</li>
+                                    <li>Combine it with other brands for one unified upload</li>
                                 </ul>
                             </li>
                         </ol>
                     </div>
-                    <div class="drop-zone" id="on-dropzone">
-                        <h3>Drop ON CSV here</h3>
-                        <p>Drop the scraper output file</p>
+                    
+                    <!-- Men's Drop Zone -->
+                    <div class="drop-zone" id="on-men-dropzone">
+                        <h3>Drop ON Men's CSV here</h3>
+                        <p>Men's inventory file</p>
                         <div class="csv-note">Pre-formatted CSV from scraper</div>
-                        <input type="file" class="file-input" id="on-file" accept=".csv">
+                        <input type="file" class="file-input" id="on-men-file" accept=".csv">
                     </div>
-                    <div class="uploaded-file" id="on-uploaded">
+                    <div class="uploaded-file" id="on-men-uploaded" style="display: none;">
                         <div class="uploaded-file-info">
-                            <strong id="on-filename"></strong>
+                            <strong id="on-men-filename"></strong>
                         </div>
-                        <button class="clear-btn" onclick="clearFile('on')">Clear</button>
+                        <button class="clear-btn" onclick="clearOnFile('men')">Clear</button>
                     </div>
-                    <div class="convert-section" id="on-convert">
+                    
+                    <!-- Women's Drop Zone -->
+                    <div class="drop-zone" id="on-women-dropzone" style="margin-top: 16px;">
+                        <h3>Drop ON Women's CSV here</h3>
+                        <p>Women's inventory file</p>
+                        <div class="csv-note">Pre-formatted CSV from scraper</div>
+                        <input type="file" class="file-input" id="on-women-file" accept=".csv">
+                    </div>
+                    <div class="uploaded-file" id="on-women-uploaded" style="display: none;">
+                        <div class="uploaded-file-info">
+                            <strong id="on-women-filename"></strong>
+                        </div>
+                        <button class="clear-btn" onclick="clearOnFile('women')">Clear</button>
+                    </div>
+                    
+                    <div class="convert-section" id="on-convert" style="display: none;">
                         <button class="convert-btn" onclick="convertBrand('on')">
-                            Add to Unified
+                            Combine & Add to Unified
                         </button>
                     </div>
                     <div class="status" id="on-status"></div>
@@ -1055,6 +1073,27 @@ https://fasttrack.brooksrunning.com/browse/search(overlay:cs/brooks/120427/12042
                     btn.classList.remove('copied');
                 }, 2000);
             });
+        }
+
+        function clearOnFile(gender) {
+            if (gender === 'men') {
+                BrandConverter.brands.on.menFile = null;
+                document.getElementById('on-men-file').value = '';
+                document.getElementById('on-men-uploaded').style.display = 'none';
+                document.getElementById('on-men-dropzone').style.display = 'flex';
+            } else {
+                BrandConverter.brands.on.womenFile = null;
+                document.getElementById('on-women-file').value = '';
+                document.getElementById('on-women-uploaded').style.display = 'none';
+                document.getElementById('on-women-dropzone').style.display = 'flex';
+            }
+            
+            // Hide convert button if either file is missing
+            if (!BrandConverter.brands.on.menFile || !BrandConverter.brands.on.womenFile) {
+                document.getElementById('on-convert').style.display = 'none';
+            }
+            
+            BrandConverter.hideStatus('on');
         }
 
         document.addEventListener('DOMContentLoaded', function() {
