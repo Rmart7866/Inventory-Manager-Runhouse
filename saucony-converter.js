@@ -1,4 +1,4 @@
-// Saucony Converter Logic - FIXED VERSION
+// Saucony Converter Logic - UPDATED WITH RIDE 19 AND WIDE WIDTH SUPPORT
 const SauconyConverter = {
     productsData: [],
     inventoryData: [],
@@ -9,6 +9,7 @@ const SauconyConverter = {
         'Endorphin Elite 2': 290,
         'Guide 18': 150,
         'Ride 18': 145,
+        'Ride 19': 145,
         'Triumph 23': 170,
         'Triumph 23 GTX': 190
     },
@@ -19,6 +20,7 @@ const SauconyConverter = {
         'Endorphin Elite 2': 'Ultimate racing shoe with full PWRRUN HG foam midsole delivering unmatched energy return. Features aggressive carbon plate geometry and ultralight construction. Designed for elite runners seeking maximum performance in races from 5K to marathon.',
         'Guide 18': 'Stability daily trainer featuring CenterPath Technology for natural support and guidance. PWRRUN foam cushioning with 6mm drop provides comfortable protection for daily miles. The engineered mesh upper offers breathability while the stability features help control pronation.',
         'Ride 18': 'Versatile neutral daily trainer with PWRRUN+ cushioning for responsive comfort. Features 8mm drop for a natural stride. Enhanced breathability and durability make it perfect for daily training, long runs, and everything in between.',
+        'Ride 19': 'Updated neutral daily trainer featuring enhanced PWRRUN+ cushioning that delivers responsive, durable comfort mile after mile. With an 8mm drop and improved breathable mesh upper, the Ride 19 offers a smooth, reliable ride for everyday training, long runs, and everything in between. The ultimate workhorse trainer built to handle your daily training demands.',
         'Triumph 23': 'Premium max-cushioned trainer featuring soft and responsive PWRRUN PB foam for ultimate comfort. 10mm drop with 37mm heel stack provides plush protection for long runs. Features Super Responsive Sockliner for added energy return.',
         'Triumph 23 GTX': 'Waterproof version of the premium max-cushioned Triumph 23 featuring GORE-TEX protection. Soft and responsive PWRRUN PB foam provides plush protection in any weather.'
     },
@@ -181,16 +183,18 @@ const SauconyConverter = {
             .join(' ');
     },
     
-    getProductHandle(productName, colorName, genderType) {
+    getProductHandle(productName, colorName, genderType, width) {
         const formattedProductName = this.formatProductName(productName);
         const formattedColorName = this.formatColorName(colorName);
         
-        // Build lookup key for existing handles
+        // Build lookup key for existing handles (without width for lookup)
         const lookupKey = `${formattedProductName}|${formattedColorName}|${genderType}`;
         
         // Check if this exact product+color+gender exists in Shopify
         if (this.existingHandles[lookupKey]) {
-            return this.existingHandles[lookupKey];
+            const baseHandle = this.existingHandles[lookupKey];
+            // Add -wide suffix for wide width shoes
+            return width === 'W' ? `${baseHandle}-wide` : baseHandle;
         }
         
         // Generate base handle
@@ -198,23 +202,28 @@ const SauconyConverter = {
             .toLowerCase()
             .replace(/[^a-z0-9]+/g, '-');
         
-        // Check if the base handle exists for a different gender
-        const oppositeGender = genderType === 'men' ? 'women' : (genderType === 'women' ? 'men' : null);
-        if (oppositeGender) {
-            const oppositeKey = `${formattedProductName}|${formattedColorName}|${oppositeGender}`;
-            if (this.existingHandles[oppositeKey]) {
-                // The opposite gender already exists with this handle, so add gender suffix to ours
-                return `${baseHandle}-${genderType}`;
+        // Add -wide suffix for wide width shoes
+        const handleWithWidth = width === 'W' ? `${baseHandle}-wide` : baseHandle;
+        
+        // Check if the base handle exists for a different gender (only for standard width)
+        if (width !== 'W') {
+            const oppositeGender = genderType === 'men' ? 'women' : (genderType === 'women' ? 'men' : null);
+            if (oppositeGender) {
+                const oppositeKey = `${formattedProductName}|${formattedColorName}|${oppositeGender}`;
+                if (this.existingHandles[oppositeKey]) {
+                    // The opposite gender already exists with this handle, so add gender suffix to ours
+                    return `${baseHandle}-${genderType}`;
+                }
             }
         }
         
         // For unisex, never add gender suffix
         if (genderType === 'unisex') {
-            return baseHandle;
+            return handleWithWidth;
         }
         
-        // New product with no conflicts - use base handle
-        return baseHandle;
+        // New product with no conflicts - use handle with width suffix if applicable
+        return handleWithWidth;
     },
     
     async convert(file) {
@@ -245,10 +254,10 @@ const SauconyConverter = {
                 continue;
             }
             
-            // ===== FIX #1: FILTER OUT NON-STANDARD WIDTHS =====
-            // Only process standard width (M) shoes - skip wide (W, 2E, D, XW, etc.)
-            if (width && width.toString().toUpperCase() !== 'M') {
-                continue;
+            // Process both standard (M) and wide (W) width shoes
+            const widthStr = width.toString().toUpperCase();
+            if (widthStr !== 'M' && widthStr !== 'W') {
+                continue; // Skip other widths like 2E, D, XW
             }
             
             const isEndorphinElite = productName && productName.toString().toLowerCase().includes('endorphin elite');
@@ -259,7 +268,6 @@ const SauconyConverter = {
             let genderPrefix = '';
             let sizeColumns = [];
             
-            // ===== FIX #2: CORRECTED COLUMN MAPPINGS =====
             // Excel structure: Column 9-23 contains sizes for ALL shoes
             // Women's: columns represent sizes 5.0-12.0
             // Men's: same columns represent sizes 7.0-14.0
@@ -285,7 +293,7 @@ const SauconyConverter = {
                     {col: 21, size: "11.0"}, {col: 22, size: "11.5"}, {col: 23, size: "12.0"}
                 ];
             } else {
-                // Men's shoes - FIXED: Now starts at column 9 instead of 8
+                // Men's shoes
                 genderPrefix = "Men's ";
                 sizeColumns = [
                     {col: 9, size: "7.0"}, {col: 10, size: "7.5"}, {col: 11, size: "8.0"},
@@ -296,7 +304,9 @@ const SauconyConverter = {
                 ];
             }
             
-            const productTitle = genderPrefix + "Saucony " + formattedProductName + " - " + formattedColorName;
+            // Add width to title if wide
+            const widthSuffix = widthStr === 'W' ? ' Wide' : '';
+            const productTitle = genderPrefix + "Saucony " + formattedProductName + " - " + formattedColorName + widthSuffix;
             
             // Determine gender type for handle generation
             let genderType = 'men';
@@ -306,8 +316,8 @@ const SauconyConverter = {
                 genderType = 'women';
             }
             
-            // Use smart handle generation that checks existing Shopify handles
-            const handle = this.getProductHandle(productName, color, genderType);
+            // Use smart handle generation that checks existing Shopify handles and adds width
+            const handle = this.getProductHandle(productName, color, genderType, widthStr);
             
             for (let sizeInfo of sizeColumns) {
                 const quantity = product[sizeInfo.col];
