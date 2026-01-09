@@ -1,156 +1,299 @@
-// Simple Tracking Integration - Just drag and drop CSVs
-
-// Global functions for HTML onclick handlers
-window.clearYesterday = function() {
-    SimpleInventoryTracker.yesterdayInventory = null;
-    document.getElementById('yesterday-file').value = '';
-    document.getElementById('yesterday-uploaded').style.display = 'none';
-    document.getElementById('yesterday-dropzone').style.display = 'block';
-    document.getElementById('simple-comparison-report').style.display = 'none';
-    document.getElementById('download-updated-section').style.display = 'none';
-};
-
-window.clearToday = function() {
-    SimpleInventoryTracker.todayInventory = null;
-    document.getElementById('today-file').value = '';
-    document.getElementById('today-uploaded').style.display = 'none';
-    document.getElementById('today-dropzone').style.display = 'block';
-    document.getElementById('simple-comparison-report').style.display = 'none';
-    document.getElementById('download-updated-section').style.display = 'none';
-};
-
-window.downloadUpdatedCSV = function() {
-    const csvData = SimpleInventoryTracker.generateUpdatedCSV();
+// FIXED Simple Inventory Tracker - Properly compares two CSV files
+const SimpleInventoryTracker = {
+    yesterdayInventory: null,
+    todayInventory: null,
+    yesterdayDate: null,
+    todayDate: null,
     
-    if (!csvData) {
-        alert('Error generating CSV. Please make sure both files are uploaded.');
-        return;
-    }
-    
-    const date = new Date().toISOString().split('T')[0];
-    const filename = `combined-inventory-${date}.csv`;
-    
-    const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', filename);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-};
-
-function setupSimpleTracking() {
-    // Setup Yesterday dropzone
-    const yesterdayDropzone = document.getElementById('yesterday-dropzone');
-    const yesterdayInput = document.getElementById('yesterday-file');
-    
-    yesterdayDropzone.addEventListener('click', () => yesterdayInput.click());
-    
-    yesterdayDropzone.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        yesterdayDropzone.classList.add('dragover');
-    });
-    
-    yesterdayDropzone.addEventListener('dragleave', () => {
-        yesterdayDropzone.classList.remove('dragover');
-    });
-    
-    yesterdayDropzone.addEventListener('drop', async (e) => {
-        e.preventDefault();
-        yesterdayDropzone.classList.remove('dragover');
-        if (e.dataTransfer.files.length > 0) {
-            await handleYesterdayFile(e.dataTransfer.files[0]);
+    async loadYesterdayCSV(file) {
+        try {
+            const text = await file.text();
+            const parsed = Papa.parse(text, { 
+                header: true,
+                skipEmptyLines: true 
+            });
+            
+            // Convert to simple format
+            const inventory = {};
+            let validRows = 0;
+            
+            parsed.data.forEach(row => {
+                // Make sure we have the required fields
+                if (row.Handle && row.SKU && row['Option1 Value']) {
+                    const key = `${row.Handle}|${row['Option1 Value']}`;
+                    inventory[key] = {
+                        handle: row.Handle,
+                        title: row.Title || '',
+                        size: row['Option1 Value'],
+                        sku: row.SKU,
+                        quantity: parseInt(row['On hand (new)']) || 0
+                    };
+                    validRows++;
+                }
+            });
+            
+            this.yesterdayInventory = inventory;
+            
+            // Extract date from filename
+            const dateMatch = file.name.match(/\d{4}-\d{2}-\d{2}/);
+            this.yesterdayDate = dateMatch ? dateMatch[0] : 'unknown';
+            
+            console.log(`Loaded yesterday: ${validRows} variants from ${file.name}`);
+            
+            return {
+                success: true,
+                date: this.yesterdayDate,
+                count: validRows
+            };
+        } catch (error) {
+            console.error('Error loading yesterday CSV:', error);
+            return { success: false, error: error.message };
         }
-    });
+    },
     
-    yesterdayInput.addEventListener('change', async (e) => {
-        if (e.target.files.length > 0) {
-            await handleYesterdayFile(e.target.files[0]);
+    async loadTodayCSV(file) {
+        try {
+            const text = await file.text();
+            const parsed = Papa.parse(text, { 
+                header: true,
+                skipEmptyLines: true 
+            });
+            
+            // Convert to simple format
+            const inventory = {};
+            let validRows = 0;
+            
+            parsed.data.forEach(row => {
+                // Make sure we have the required fields
+                if (row.Handle && row.SKU && row['Option1 Value']) {
+                    const key = `${row.Handle}|${row['Option1 Value']}`;
+                    inventory[key] = {
+                        handle: row.Handle,
+                        title: row.Title || '',
+                        size: row['Option1 Value'],
+                        sku: row.SKU,
+                        quantity: parseInt(row['On hand (new)']) || 0
+                    };
+                    validRows++;
+                }
+            });
+            
+            this.todayInventory = inventory;
+            
+            // Extract date from filename
+            const dateMatch = file.name.match(/\d{4}-\d{2}-\d{2}/);
+            this.todayDate = dateMatch ? dateMatch[0] : 'unknown';
+            
+            console.log(`Loaded today: ${validRows} variants from ${file.name}`);
+            
+            return {
+                success: true,
+                date: this.todayDate,
+                count: validRows
+            };
+        } catch (error) {
+            console.error('Error loading today CSV:', error);
+            return { success: false, error: error.message };
         }
-    });
+    },
     
-    // Setup Today dropzone
-    const todayDropzone = document.getElementById('today-dropzone');
-    const todayInput = document.getElementById('today-file');
-    
-    todayDropzone.addEventListener('click', () => todayInput.click());
-    
-    todayDropzone.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        todayDropzone.classList.add('dragover');
-    });
-    
-    todayDropzone.addEventListener('dragleave', () => {
-        todayDropzone.classList.remove('dragover');
-    });
-    
-    todayDropzone.addEventListener('drop', async (e) => {
-        e.preventDefault();
-        todayDropzone.classList.remove('dragover');
-        if (e.dataTransfer.files.length > 0) {
-            await handleTodayFile(e.dataTransfer.files[0]);
+    compareInventories() {
+        if (!this.yesterdayInventory || !this.todayInventory) {
+            return {
+                hasComparison: false,
+                message: 'Please upload both yesterday and today CSV files.'
+            };
         }
-    });
-    
-    todayInput.addEventListener('change', async (e) => {
-        if (e.target.files.length > 0) {
-            await handleTodayFile(e.target.files[0]);
-        }
-    });
-}
-
-async function handleYesterdayFile(file) {
-    const result = await SimpleInventoryTracker.loadYesterdayCSV(file);
-    
-    if (result.success) {
-        document.getElementById('yesterday-filename').textContent = file.name;
-        document.getElementById('yesterday-info').textContent = `(${result.count} variants)`;
-        document.getElementById('yesterday-uploaded').style.display = 'flex';
-        document.getElementById('yesterday-dropzone').style.display = 'none';
         
-        // If today is also loaded, show comparison
-        if (SimpleInventoryTracker.todayInventory) {
-            showSimpleComparison();
-        }
-    } else {
-        alert('Error loading file: ' + result.error);
-    }
-}
-
-async function handleTodayFile(file) {
-    const result = await SimpleInventoryTracker.loadTodayCSV(file);
-    
-    if (result.success) {
-        document.getElementById('today-filename').textContent = file.name;
-        document.getElementById('today-info').textContent = `(${result.count} variants)`;
-        document.getElementById('today-uploaded').style.display = 'flex';
-        document.getElementById('today-dropzone').style.display = 'none';
+        const discontinued = [];
+        const newProducts = [];
+        const quantityChanges = [];
         
-        // If yesterday is also loaded, show comparison
-        if (SimpleInventoryTracker.yesterdayInventory) {
-            showSimpleComparison();
+        console.log('Starting comparison...');
+        console.log(`Yesterday has ${Object.keys(this.yesterdayInventory).length} products`);
+        console.log(`Today has ${Object.keys(this.todayInventory).length} products`);
+        
+        // Find discontinued products (in yesterday but not today)
+        for (const [key, item] of Object.entries(this.yesterdayInventory)) {
+            if (!this.todayInventory[key]) {
+                discontinued.push({
+                    ...item,
+                    previousQuantity: item.quantity
+                });
+            }
         }
-    } else {
-        alert('Error loading file: ' + result.error);
-    }
-}
-
-function showSimpleComparison() {
-    const report = SimpleInventoryTracker.getComparisonReport();
-    const reportDiv = document.getElementById('simple-comparison-report');
+        
+        console.log(`Found ${discontinued.length} discontinued products`);
+        
+        // Find new products (in today but not yesterday)
+        for (const [key, item] of Object.entries(this.todayInventory)) {
+            if (!this.yesterdayInventory[key]) {
+                newProducts.push(item);
+            } else {
+                // Check for quantity changes
+                const yesterdayQty = this.yesterdayInventory[key].quantity;
+                const todayQty = item.quantity;
+                if (yesterdayQty !== todayQty) {
+                    quantityChanges.push({
+                        ...item,
+                        previousQuantity: yesterdayQty,
+                        change: todayQty - yesterdayQty
+                    });
+                }
+            }
+        }
+        
+        console.log(`Found ${newProducts.length} new products`);
+        console.log(`Found ${quantityChanges.length} quantity changes`);
+        
+        return {
+            hasComparison: true,
+            stats: {
+                totalYesterday: Object.keys(this.yesterdayInventory).length,
+                totalToday: Object.keys(this.todayInventory).length,
+                discontinued: discontinued.length,
+                new: newProducts.length,
+                changed: quantityChanges.length
+            },
+            discontinued,
+            newProducts,
+            quantityChanges
+        };
+    },
     
-    if (reportDiv) {
-        reportDiv.textContent = report;
-        reportDiv.style.display = 'block';
-    }
+    getComparisonReport() {
+        const comparison = this.compareInventories();
+        
+        if (!comparison.hasComparison) {
+            return comparison.message;
+        }
+        
+        let report = `INVENTORY COMPARISON REPORT\n`;
+        report += `${'='.repeat(60)}\n\n`;
+        
+        report += `COMPARING:\n`;
+        report += `  Yesterday (${this.yesterdayDate}): ${comparison.stats.totalYesterday} variants\n`;
+        report += `  Today (${this.todayDate}): ${comparison.stats.totalToday} variants\n`;
+        report += `  Net Change: ${comparison.stats.totalToday - comparison.stats.totalYesterday > 0 ? '+' : ''}${comparison.stats.totalToday - comparison.stats.totalYesterday}\n\n`;
+        
+        report += `SUMMARY:\n`;
+        report += `  Discontinued: ${comparison.stats.discontinued} variants\n`;
+        report += `  New Products: ${comparison.stats.new} variants\n`;
+        report += `  Quantity Changes: ${comparison.stats.changed} variants\n\n`;
+        
+        if (comparison.stats.discontinued > 0) {
+            report += `${'='.repeat(60)}\n`;
+            report += `DISCONTINUED PRODUCTS (${comparison.stats.discontinued} variants):\n`;
+            report += `${'='.repeat(60)}\n`;
+            comparison.discontinued.slice(0, 50).forEach(item => {
+                report += `  - ${item.title} - Size ${item.size} (Was: ${item.previousQuantity})\n`;
+            });
+            if (comparison.stats.discontinued > 50) {
+                report += `  ... and ${comparison.stats.discontinued - 50} more\n`;
+            }
+            report += '\n';
+        }
+        
+        if (comparison.stats.new > 0) {
+            report += `${'='.repeat(60)}\n`;
+            report += `NEW PRODUCTS (${comparison.stats.new} variants):\n`;
+            report += `${'='.repeat(60)}\n`;
+            comparison.newProducts.slice(0, 30).forEach(item => {
+                report += `  - ${item.title} - Size ${item.size} (Qty: ${item.quantity})\n`;
+            });
+            if (comparison.stats.new > 30) {
+                report += `  ... and ${comparison.stats.new - 30} more\n`;
+            }
+            report += '\n';
+        }
+        
+        if (comparison.stats.changed > 0) {
+            report += `${'='.repeat(60)}\n`;
+            report += `QUANTITY CHANGES (${comparison.stats.changed} variants):\n`;
+            report += `${'='.repeat(60)}\n`;
+            comparison.quantityChanges.slice(0, 30).forEach(item => {
+                const direction = item.change > 0 ? 'increased' : 'decreased';
+                report += `  - ${item.title} - Size ${item.size}: ${item.previousQuantity} -> ${item.quantity} (${direction} by ${Math.abs(item.change)})\n`;
+            });
+            if (comparison.stats.changed > 30) {
+                report += `  ... and ${comparison.stats.changed - 30} more\n`;
+            }
+        }
+        
+        return report;
+    },
     
-    // Show download button
-    document.getElementById('download-updated-section').style.display = 'block';
-}
-
-// Initialize on page load
-document.addEventListener('DOMContentLoaded', () => {
-    setupSimpleTracking();
-});
+    generateUpdatedCSV() {
+        if (!this.todayInventory) {
+            return null;
+        }
+        
+        const comparison = this.compareInventories();
+        if (!comparison.hasComparison) {
+            return null;
+        }
+        
+        // Create CSV with discontinued products set to 0
+        const allRows = [];
+        
+        // Add today's inventory
+        for (const item of Object.values(this.todayInventory)) {
+            allRows.push({
+                Handle: item.handle,
+                Title: item.title,
+                'Option1 Name': 'Size',
+                'Option1 Value': item.size,
+                'Option2 Name': '',
+                'Option2 Value': '',
+                'Option3 Name': '',
+                'Option3 Value': '',
+                SKU: item.sku,
+                Barcode: '',
+                'HS Code': '',
+                COO: '',
+                Location: 'Needham',
+                'Bin name': '',
+                'Incoming (not editable)': '',
+                'Unavailable (not editable)': '',
+                'Committed (not editable)': '',
+                'Available (not editable)': '',
+                'On hand (current)': '',
+                'On hand (new)': item.quantity
+            });
+        }
+        
+        // Add discontinued products with 0 quantity
+        for (const item of comparison.discontinued) {
+            allRows.push({
+                Handle: item.handle,
+                Title: item.title,
+                'Option1 Name': 'Size',
+                'Option1 Value': item.size,
+                'Option2 Name': '',
+                'Option2 Value': '',
+                'Option3 Name': '',
+                'Option3 Value': '',
+                SKU: item.sku,
+                Barcode: '',
+                'HS Code': '',
+                COO: '',
+                Location: 'Needham',
+                'Bin name': '',
+                'Incoming (not editable)': '',
+                'Unavailable (not editable)': '',
+                'Committed (not editable)': '',
+                'Available (not editable)': '',
+                'On hand (current)': '',
+                'On hand (new)': 0
+            });
+        }
+        
+        console.log(`Generated CSV with ${allRows.length} rows (${this.todayInventory ? Object.keys(this.todayInventory).length : 0} current + ${comparison.discontinued.length} discontinued)`);
+        
+        return Papa.unparse(allRows, {
+            quotes: true,
+            quoteChar: '"',
+            delimiter: ','
+        });
+    }
+};
