@@ -1,4 +1,13 @@
-// Main Unified Converter Controller - FIXED
+// Main Unified Converter Controller - COMPLETE WITH TRACKING & DATES
+// Helper function to get formatted date
+function getFormattedDate() {
+    const date = new Date();
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
 const BrandConverter = {
     brands: {
         saucony: { file: null, inventory: [], csv: '' },
@@ -243,7 +252,7 @@ const BrandConverter = {
     },
     
     downloadBrandInventory(brand) {
-        const date = new Date().toISOString().split('T')[0];
+        const date = getFormattedDate();
         const filename = `${brand}-inventory-${date}.csv`;
         const csvData = this.brands[brand].csv;
         
@@ -409,7 +418,7 @@ async function convertBrand(brand) {
     }
 }
 
-// Download unified inventory - Only selected brands
+// Download unified inventory - Only selected brands (WITH TRACKING & DATE)
 function downloadUnified() {
     const allInventory = [];
     let selectedBrands = [];
@@ -425,6 +434,18 @@ function downloadUnified() {
     if (allInventory.length === 0) {
         alert('Please select at least one brand to download!');
         return;
+    }
+    
+    // Create current snapshot (if tracking is available)
+    if (typeof InventoryTracker !== 'undefined') {
+        InventoryTracker.createCurrentSnapshot(BrandConverter.brands);
+        
+        // Add discontinued products with 0 quantity if we have a previous snapshot
+        const discontinuedRows = InventoryTracker.generateDiscontinuedInventoryRows();
+        if (discontinuedRows.length > 0) {
+            console.log(`Adding ${discontinuedRows.length} discontinued products with 0 quantity`);
+            allInventory.push(...discontinuedRows);
+        }
     }
     
     // CRITICAL FIX: Match the exact format from individual converters with quoted headers
@@ -457,8 +478,8 @@ function downloadUnified() {
     
     const csvData = csvRows.join('\n');
     
-    const date = new Date().toISOString().split('T')[0];
-    const filename = `unified-inventory-${date}.csv`;
+    const date = getFormattedDate();
+    const filename = `combined-inventory-${date}.csv`;
     
     const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
@@ -469,6 +490,19 @@ function downloadUnified() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    
+    // Show tracking actions if available
+    if (document.getElementById('tracking-actions')) {
+        document.getElementById('tracking-actions').style.display = 'block';
+    }
+    
+    // Show comparison if we had a previous snapshot
+    if (typeof showComparisonReport !== 'undefined' && typeof InventoryTracker !== 'undefined') {
+        const discontinuedRows = InventoryTracker.generateDiscontinuedInventoryRows();
+        if (discontinuedRows && discontinuedRows.length > 0) {
+            showComparisonReport();
+        }
+    }
 }
 
 // Initialize on page load
