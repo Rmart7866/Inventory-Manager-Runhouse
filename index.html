@@ -1569,9 +1569,19 @@ https://fasttrack.brooksrunning.com/browse/search(overlay:cs/brooks/120427/12042
             
             const handleIndex = headers.indexOf('Handle');
             const titleIndex = headers.indexOf('Title');
-            const variantSKUIndex = headers.indexOf('Variant SKU');
+            const skuIndex = headers.indexOf('SKU');
             const option1Index = headers.indexOf('Option1 Value');
-            const variantInventoryQtyIndex = headers.indexOf('Variant Inventory Qty');
+            const barcodeIndex = headers.indexOf('Barcode');
+            const hsCodeIndex = headers.indexOf('HS Code');
+            const cooIndex = headers.indexOf('COO');
+            const locationIndex = headers.indexOf('Location');
+            const binNameIndex = headers.indexOf('Bin name');
+            
+            // Try to find the quantity column - could be "On hand (new)" or "Variant Inventory Qty"
+            let qtyIndex = headers.indexOf('On hand (new)');
+            if (qtyIndex === -1) {
+                qtyIndex = headers.indexOf('Variant Inventory Qty');
+            }
             
             const variants = [];
             
@@ -1583,9 +1593,14 @@ https://fasttrack.brooksrunning.com/browse/search(overlay:cs/brooks/120427/12042
                 
                 const handle = values[handleIndex]?.trim().replace(/^"|"$/g, '') || '';
                 const title = values[titleIndex]?.trim().replace(/^"|"$/g, '') || '';
-                const sku = values[variantSKUIndex]?.trim().replace(/^"|"$/g, '') || '';
+                const sku = values[skuIndex]?.trim().replace(/^"|"$/g, '') || '';
                 const size = values[option1Index]?.trim().replace(/^"|"$/g, '') || '';
-                const qty = values[variantInventoryQtyIndex]?.trim().replace(/^"|"$/g, '') || '0';
+                const qty = values[qtyIndex]?.trim().replace(/^"|"$/g, '') || '0';
+                const barcode = values[barcodeIndex]?.trim().replace(/^"|"$/g, '') || '';
+                const hsCode = values[hsCodeIndex]?.trim().replace(/^"|"$/g, '') || '';
+                const coo = values[cooIndex]?.trim().replace(/^"|"$/g, '') || '';
+                const location = values[locationIndex]?.trim().replace(/^"|"$/g, '') || '';
+                const binName = values[binNameIndex]?.trim().replace(/^"|"$/g, '') || '';
                 
                 if (handle && size) {
                     variants.push({
@@ -1593,7 +1608,12 @@ https://fasttrack.brooksrunning.com/browse/search(overlay:cs/brooks/120427/12042
                         Title: title,
                         SKU: sku,
                         Size: size,
-                        Quantity: parseInt(qty) || 0
+                        Quantity: parseInt(qty) || 0,
+                        Barcode: barcode,
+                        HSCode: hsCode,
+                        COO: coo,
+                        Location: location,
+                        BinName: binName
                     });
                 }
             }
@@ -1716,7 +1736,8 @@ https://fasttrack.brooksrunning.com/browse/search(overlay:cs/brooks/120427/12042
         function generateCompleteUpdateCSV(comparison) {
             const { discontinuedColorways, todayColorways } = comparison;
             
-            let csv = 'Handle,Title,Body (HTML),Vendor,Product Category,Type,Tags,Published,Option1 Name,Option1 Value,Variant SKU,Variant Grams,Variant Inventory Tracker,Variant Inventory Qty,Variant Inventory Policy,Variant Fulfillment Service,Variant Price,Variant Compare At Price,Variant Requires Shipping,Variant Taxable,Variant Barcode,Image Src,Image Position,Image Alt Text,Gift Card,SEO Title,SEO Description,Google Shopping / Google Product Category,Google Shopping / Gender,Google Shopping / Age Group,Google Shopping / MPN,Google Shopping / Condition,Google Shopping / Custom Product,Google Shopping / Custom Label 0,Google Shopping / Custom Label 1,Google Shopping / Custom Label 2,Google Shopping / Custom Label 3,Google Shopping / Custom Label 4,Variant Image,Variant Weight Unit,Variant Tax Code,Cost per item,Included / United States,Price / United States,Compare At Price / United States,Included / International,Price / International,Compare At Price / International,Status\n';
+            // Use the same format as combined-inventory CSV
+            let csv = 'Handle,Title,"Option1 Name","Option1 Value","Option2 Name","Option2 Value","Option3 Name","Option3 Value",SKU,Barcode,"HS Code",COO,Location,"Bin name","Incoming (not editable)","Unavailable (not editable)","Committed (not editable)","Available (not editable)","On hand (current)","On hand (new)"\n';
             
             // Add all of today's inventory with actual quantities
             const todayColorwaysArray = Array.from(todayColorways.entries()).sort((a, b) => {
@@ -1728,7 +1749,11 @@ https://fasttrack.brooksrunning.com/browse/search(overlay:cs/brooks/120427/12042
             todayColorwaysArray.forEach(([handle, variants]) => {
                 variants.forEach((variant, index) => {
                     const isFirstVariant = index === 0;
-                    csv += `"${variant.Handle}","${isFirstVariant ? variant.Title : ''}","","","","","","TRUE","${isFirstVariant ? 'Size' : ''}","${variant.Size}","${variant.SKU}","0","shopify","${variant.Quantity}","deny","manual","","","TRUE","TRUE","","","","","FALSE","","","","","","","","","","","","","","lb","","","TRUE","","","FALSE","","","active"\n`;
+                    csv += `${variant.Handle},"${isFirstVariant ? variant.Title : ''}",`;
+                    csv += `${isFirstVariant ? 'Size' : ''},${variant.Size},,,,,`;
+                    csv += `${variant.SKU},${variant.Barcode || ''},${variant.HSCode || ''},${variant.COO || ''},`;
+                    csv += `${variant.Location || ''},${variant.BinName || ''},,,,,`;
+                    csv += `,${variant.Quantity}\n`;
                 });
             });
             
@@ -1736,7 +1761,11 @@ https://fasttrack.brooksrunning.com/browse/search(overlay:cs/brooks/120427/12042
             discontinuedColorways.forEach(colorway => {
                 colorway.variants.forEach((variant, index) => {
                     const isFirstVariant = index === 0;
-                    csv += `"${variant.Handle}","${isFirstVariant ? variant.Title : ''}","","","","","","TRUE","${isFirstVariant ? 'Size' : ''}","${variant.Size}","${variant.SKU}","0","shopify","0","deny","manual","","","TRUE","TRUE","","","","","FALSE","","","","","","","","","","","","","","lb","","","TRUE","","","FALSE","","","active"\n`;
+                    csv += `${variant.Handle},"${isFirstVariant ? variant.Title : ''}",`;
+                    csv += `${isFirstVariant ? 'Size' : ''},${variant.Size},,,,,`;
+                    csv += `${variant.SKU},${variant.Barcode || ''},${variant.HSCode || ''},${variant.COO || ''},`;
+                    csv += `${variant.Location || ''},${variant.BinName || ''},,,,,`;
+                    csv += `,0\n`;
                 });
             });
             
