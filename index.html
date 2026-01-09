@@ -146,6 +146,139 @@
             color: #6c757d;
         }
 
+        /* ========== NEW: TRACKING SECTION STYLES ========== */
+        .tracking-section {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            margin-bottom: 32px;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+            border: 2px solid #e3f2fd;
+        }
+
+        .tracking-header h2 {
+            font-size: 28px;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin-bottom: 8px;
+        }
+
+        .tracking-header p {
+            color: #6c757d;
+            font-size: 15px;
+            margin-bottom: 24px;
+        }
+
+        .localstorage-badge {
+            background: linear-gradient(135deg, #28a745 0%, #34ce57 100%);
+            color: white;
+            padding: 16px 24px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            font-weight: 600;
+            font-size: 15px;
+            text-align: center;
+        }
+
+        .drop-zone-small {
+            border: 2px dashed #cbd5e0;
+            border-radius: 12px;
+            padding: 32px 24px;
+            text-align: center;
+            background: #f8f9fa;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .drop-zone-small:hover {
+            border-color: #667eea;
+            background: #f0f2ff;
+        }
+
+        .drop-zone-small h3 {
+            font-size: 17px;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin-bottom: 8px;
+        }
+
+        .drop-zone-small p {
+            color: #6c757d;
+            font-size: 14px;
+        }
+
+        .snapshot-uploaded {
+            background: #667eea;
+            border-radius: 12px;
+            padding: 16px 24px;
+            display: none;
+            align-items: center;
+            justify-content: space-between;
+            color: white;
+        }
+
+        .comparison-report {
+            display: none;
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 24px;
+            border-radius: 8px;
+            margin: 24px 0;
+            white-space: pre-wrap;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.8;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .tracking-actions {
+            text-align: center;
+            padding-top: 24px;
+            border-top: 2px dashed #e9ecef;
+        }
+
+        .snapshot-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 16px 32px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .snapshot-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.3);
+        }
+
+        .clear-history-btn {
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 10px 20px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .clear-history-btn:hover {
+            background: #c82333;
+            transform: translateY(-1px);
+        }
+
+        .tracking-note {
+            margin-top: 12px;
+            color: #6c757d;
+            font-size: 14px;
+        }
+        /* ========== END TRACKING SECTION STYLES ========== */
+
         /* Brand Cards Grid - BIGGER TILES */
         .brand-sections {
             display: grid;
@@ -658,6 +791,48 @@
                 <p>Professional inventory conversion for Shopify</p>
             </div>
 
+            <!-- ========== NEW: INVENTORY TRACKING SECTION ========== -->
+            <div class="tracking-section">
+                <div class="tracking-header">
+                    <h2>📊 Day-to-Day Inventory Tracking</h2>
+                    <p>Automatically tracks changes using your browser's memory</p>
+                </div>
+                
+                <!-- Auto-loaded badge -->
+                <div id="localstorage-badge" class="localstorage-badge" style="display: none;">
+                    <!-- Populated by JavaScript -->
+                </div>
+                
+                <div class="tracking-upload">
+                    <div class="drop-zone-small" id="snapshot-dropzone">
+                        <h3>📁 Upload Previous Snapshot (Optional)</h3>
+                        <p>Only needed if using a different computer</p>
+                        <p style="font-size: 12px; color: #999; margin-top: 8px;">On the same computer? No upload needed - it's automatic!</p>
+                        <input type="file" class="file-input" id="snapshot-file" accept=".json">
+                    </div>
+                    <div class="snapshot-uploaded" id="snapshot-uploaded">
+                        <div class="uploaded-file-info">
+                            <strong id="snapshot-filename"></strong>
+                            <span id="snapshot-date"></span>
+                        </div>
+                        <button class="clear-btn" onclick="clearSnapshot()">Clear</button>
+                    </div>
+                </div>
+                
+                <div class="comparison-report" id="comparison-report"></div>
+                
+                <div class="tracking-actions" id="tracking-actions" style="display: none;">
+                    <button class="snapshot-btn" onclick="downloadTodaySnapshot()">
+                        💾 Download Snapshot (For Different Computer)
+                    </button>
+                    <p class="tracking-note">Only download if you'll use a different computer tomorrow</p>
+                    <button class="clear-history-btn" onclick="clearAllHistory()" style="margin-top: 12px;">
+                        🗑️ Clear All History
+                    </button>
+                </div>
+            </div>
+            <!-- ========== END TRACKING SECTION ========== -->
+
             <div class="brand-sections">
                 <!-- Saucony Section -->
                 <div class="brand-card" data-brand="saucony">
@@ -857,8 +1032,6 @@ https://b2b.asics.com/orders/100505775/products/1012B838?colorCode=001&deliveryD
 https://b2b.asics.com/orders/100505875/products/1011C138?colorCode=300&deliveryDate=2025-10-08
 https://b2b.asics.com/orders/100505875/products/1012B911?colorCode=600&deliveryDate=2025-10-08
 https://b2b.asics.com/orders/100505875/products/1011C025?colorCode=300&deliveryDate=2025-10-08
-
-
                             </div>
                             <button class="copy-btn" onclick="copyLinks('asics')">Copy All Links</button>
                         </div>
@@ -1116,6 +1289,10 @@ https://fasttrack.brooksrunning.com/browse/search(overlay:cs/brooks/120427/12042
     <script src="hoka-converter.js"></script>
     <script src="puma-converter.js"></script>
     <script src="newbalance-converter.js"></script>
+    <!-- NEW TRACKING SCRIPTS -->
+    <script src="inventory-tracker.js"></script>
+    <script src="tracking-integration.js"></script>
+    <!-- END NEW TRACKING SCRIPTS -->
     <script src="main.js"></script>
 </body>
 </html>
