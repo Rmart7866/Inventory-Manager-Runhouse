@@ -1,354 +1,339 @@
-// IMPROVED Simple Inventory Tracker - With Product Grouping and Colorway Detection
-const SimpleInventoryTracker = {
-    yesterdayInventory: null,
-    todayInventory: null,
-    yesterdayDate: null,
-    todayDate: null,
+// ====================================================================
+// INVENTORY TRACKER - CORRECTED VERSION
+// ====================================================================
+// Discontinued = Any colorway not present in new file (set qty to 0)
+// New Colorway = Any colorway in new file that wasn't in old file
+// ====================================================================
+
+function compareInventories(yesterdayCSV, todayCSV) {
+    console.log('Starting comparison...');
     
-    async loadYesterdayCSV(file) {
-        try {
-            const text = await file.text();
-            const parsed = Papa.parse(text, { 
-                header: true,
-                skipEmptyLines: true 
-            });
-            
-            // Convert to simple format
-            const inventory = {};
-            let validRows = 0;
-            
-            parsed.data.forEach(row => {
-                // Make sure we have the required fields
-                if (row.Handle && row.SKU && row['Option1 Value']) {
-                    const key = `${row.Handle}|${row['Option1 Value']}`;
-                    inventory[key] = {
-                        handle: row.Handle,
-                        title: row.Title || '',
-                        size: row['Option1 Value'],
-                        sku: row.SKU,
-                        quantity: parseInt(row['On hand (new)']) || 0
-                    };
-                    validRows++;
-                }
-            });
-            
-            this.yesterdayInventory = inventory;
-            
-            // Extract date from filename
-            const dateMatch = file.name.match(/\d{4}-\d{2}-\d{2}/);
-            this.yesterdayDate = dateMatch ? dateMatch[0] : 'unknown';
-            
-            console.log(`Loaded yesterday: ${validRows} variants from ${file.name}`);
-            
-            return {
-                success: true,
-                date: this.yesterdayDate,
-                count: validRows
-            };
-        } catch (error) {
-            console.error('Error loading yesterday CSV:', error);
-            return { success: false, error: error.message };
-        }
-    },
+    // Parse CSVs
+    const yesterday = parseShopifyCSV(yesterdayCSV);
+    const today = parseShopifyCSV(todayCSV);
     
-    async loadTodayCSV(file) {
-        try {
-            const text = await file.text();
-            const parsed = Papa.parse(text, { 
-                header: true,
-                skipEmptyLines: true 
-            });
-            
-            // Convert to simple format
-            const inventory = {};
-            let validRows = 0;
-            
-            parsed.data.forEach(row => {
-                // Make sure we have the required fields
-                if (row.Handle && row.SKU && row['Option1 Value']) {
-                    const key = `${row.Handle}|${row['Option1 Value']}`;
-                    inventory[key] = {
-                        handle: row.Handle,
-                        title: row.Title || '',
-                        size: row['Option1 Value'],
-                        sku: row.SKU,
-                        quantity: parseInt(row['On hand (new)']) || 0
-                    };
-                    validRows++;
-                }
-            });
-            
-            this.todayInventory = inventory;
-            
-            // Extract date from filename
-            const dateMatch = file.name.match(/\d{4}-\d{2}-\d{2}/);
-            this.todayDate = dateMatch ? dateMatch[0] : 'unknown';
-            
-            console.log(`Loaded today: ${validRows} variants from ${file.name}`);
-            
-            return {
-                success: true,
-                date: this.todayDate,
-                count: validRows
-            };
-        } catch (error) {
-            console.error('Error loading today CSV:', error);
-            return { success: false, error: error.message };
-        }
-    },
+    console.log(`Yesterday variants: ${yesterday.length}`);
+    console.log(`Today variants: ${today.length}`);
     
-    // Group products by their base handle (colorway)
-    groupByColorway(inventory) {
-        const groups = {};
-        
-        for (const [key, item] of Object.entries(inventory)) {
-            const handle = item.handle;
-            if (!groups[handle]) {
-                groups[handle] = {
-                    title: item.title,
-                    handle: handle,
-                    variants: []
-                };
-            }
-            groups[handle].variants.push(item);
-        }
-        
-        return groups;
-    },
+    // Group by colorway (Handle)
+    const yesterdayColorways = new Map(); // handle -> variants
+    const todayColorways = new Map();
     
-    compareInventories() {
-        if (!this.yesterdayInventory || !this.todayInventory) {
-            return {
-                hasComparison: false,
-                message: 'Please upload both yesterday and today CSV files.'
-            };
+    // Group yesterday's data by Handle (colorway)
+    yesterday.forEach(variant => {
+        if (!yesterdayColorways.has(variant.Handle)) {
+            yesterdayColorways.set(variant.Handle, []);
         }
-        
-        const discontinued = [];
-        const newProducts = [];
-        const quantityChanges = [];
-        
-        console.log('Starting comparison...');
-        console.log(`Yesterday has ${Object.keys(this.yesterdayInventory).length} products`);
-        console.log(`Today has ${Object.keys(this.todayInventory).length} products`);
-        
-        // Find discontinued products (in yesterday but not today)
-        for (const [key, item] of Object.entries(this.yesterdayInventory)) {
-            if (!this.todayInventory[key]) {
-                discontinued.push({
-                    ...item,
-                    previousQuantity: item.quantity
-                });
-            }
-        }
-        
-        console.log(`Found ${discontinued.length} discontinued products`);
-        
-        // Find new products (in today but not yesterday)
-        for (const [key, item] of Object.entries(this.todayInventory)) {
-            if (!this.yesterdayInventory[key]) {
-                newProducts.push(item);
-            } else {
-                // Check for quantity changes
-                const yesterdayQty = this.yesterdayInventory[key].quantity;
-                const todayQty = item.quantity;
-                if (yesterdayQty !== todayQty) {
-                    quantityChanges.push({
-                        ...item,
-                        previousQuantity: yesterdayQty,
-                        change: todayQty - yesterdayQty
-                    });
-                }
-            }
-        }
-        
-        console.log(`Found ${newProducts.length} new products`);
-        console.log(`Found ${quantityChanges.length} quantity changes`);
-        
-        // Group discontinued and new products by colorway
-        const discontinuedByColorway = this.groupByColorway(
-            discontinued.reduce((acc, item) => {
-                const key = `${item.handle}|${item.size}`;
-                acc[key] = item;
-                return acc;
-            }, {})
-        );
-        
-        const newByColorway = this.groupByColorway(
-            newProducts.reduce((acc, item) => {
-                const key = `${item.handle}|${item.size}`;
-                acc[key] = item;
-                return acc;
-            }, {})
-        );
-        
-        return {
-            hasComparison: true,
-            stats: {
-                totalYesterday: Object.keys(this.yesterdayInventory).length,
-                totalToday: Object.keys(this.todayInventory).length,
-                discontinued: discontinued.length,
-                discontinuedColorways: Object.keys(discontinuedByColorway).length,
-                new: newProducts.length,
-                newColorways: Object.keys(newByColorway).length,
-                changed: quantityChanges.length
-            },
-            discontinued,
-            discontinuedByColorway,
-            newProducts,
-            newByColorway,
-            quantityChanges
-        };
-    },
+        yesterdayColorways.get(variant.Handle).push(variant);
+    });
     
-    getComparisonReport() {
-        const comparison = this.compareInventories();
-        
-        if (!comparison.hasComparison) {
-            return comparison.message;
+    // Group today's data by Handle (colorway)
+    today.forEach(variant => {
+        if (!todayColorways.has(variant.Handle)) {
+            todayColorways.set(variant.Handle, []);
         }
-        
-        let report = `INVENTORY COMPARISON REPORT\n`;
-        report += `${'='.repeat(70)}\n\n`;
-        
-        report += `COMPARING:\n`;
-        report += `  Yesterday (${this.yesterdayDate}): ${comparison.stats.totalYesterday} variants\n`;
-        report += `  Today (${this.todayDate}): ${comparison.stats.totalToday} variants\n`;
-        report += `  Net Change: ${comparison.stats.totalToday - comparison.stats.totalYesterday > 0 ? '+' : ''}${comparison.stats.totalToday - comparison.stats.totalYesterday}\n\n`;
-        
-        report += `SUMMARY:\n`;
-        report += `  Discontinued: ${comparison.stats.discontinued} variants (${comparison.stats.discontinuedColorways} colorways)\n`;
-        report += `  New Products: ${comparison.stats.new} variants (${comparison.stats.newColorways} colorways)\n`;
-        report += `  Quantity Changes: ${comparison.stats.changed} variants\n\n`;
-        
-        // DISCONTINUED PRODUCTS GROUPED BY COLORWAY
-        if (comparison.stats.discontinuedColorways > 0) {
-            report += `${'='.repeat(70)}\n`;
-            report += `DISCONTINUED PRODUCTS (${comparison.stats.discontinuedColorways} colorways, ${comparison.stats.discontinued} total variants)\n`;
-            report += `${'='.repeat(70)}\n\n`;
-            
-            const sortedColorways = Object.values(comparison.discontinuedByColorway)
-                .sort((a, b) => a.title.localeCompare(b.title));
-            
-            sortedColorways.forEach(colorway => {
-                report += `${colorway.title}\n`;
-                report += `  Sizes: `;
-                const sizes = colorway.variants
-                    .sort((a, b) => parseFloat(a.size) - parseFloat(b.size))
-                    .map(v => `${v.size} (${v.quantity})`);
-                report += sizes.join(', ');
-                report += `\n  Total variants: ${colorway.variants.length}\n\n`;
-            });
-        }
-        
-        // NEW PRODUCTS GROUPED BY COLORWAY
-        if (comparison.stats.newColorways > 0) {
-            report += `${'='.repeat(70)}\n`;
-            report += `NEW COLORWAYS (${comparison.stats.newColorways} colorways, ${comparison.stats.new} total variants)\n`;
-            report += `${'='.repeat(70)}\n\n`;
-            
-            const sortedColorways = Object.values(comparison.newByColorway)
-                .sort((a, b) => a.title.localeCompare(b.title));
-            
-            sortedColorways.forEach(colorway => {
-                report += `${colorway.title}\n`;
-                report += `  Sizes: `;
-                const sizes = colorway.variants
-                    .sort((a, b) => parseFloat(a.size) - parseFloat(b.size))
-                    .map(v => `${v.size} (${v.quantity})`);
-                report += sizes.join(', ');
-                report += `\n  Total variants: ${colorway.variants.length}\n\n`;
-            });
-        }
-        
-        // QUANTITY CHANGES (show first 30)
-        if (comparison.stats.changed > 0) {
-            report += `${'='.repeat(70)}\n`;
-            report += `QUANTITY CHANGES (${comparison.stats.changed} variants)\n`;
-            report += `${'='.repeat(70)}\n`;
-            comparison.quantityChanges.slice(0, 30).forEach(item => {
-                const direction = item.change > 0 ? 'increased' : 'decreased';
-                report += `  ${item.title} - Size ${item.size}: ${item.previousQuantity} -> ${item.quantity} (${direction} by ${Math.abs(item.change)})\n`;
-            });
-            if (comparison.stats.changed > 30) {
-                report += `  ... and ${comparison.stats.changed - 30} more\n`;
-            }
-        }
-        
-        return report;
-    },
+        todayColorways.get(variant.Handle).push(variant);
+    });
     
-    generateUpdatedCSV() {
-        if (!this.todayInventory) {
-            return null;
-        }
-        
-        const comparison = this.compareInventories();
-        if (!comparison.hasComparison) {
-            return null;
-        }
-        
-        // Create CSV with discontinued products set to 0
-        const allRows = [];
-        
-        // Add today's inventory
-        for (const item of Object.values(this.todayInventory)) {
-            allRows.push({
-                Handle: item.handle,
-                Title: item.title,
-                'Option1 Name': 'Size',
-                'Option1 Value': item.size,
-                'Option2 Name': '',
-                'Option2 Value': '',
-                'Option3 Name': '',
-                'Option3 Value': '',
-                SKU: item.sku,
-                Barcode: '',
-                'HS Code': '',
-                COO: '',
-                Location: 'Needham',
-                'Bin name': '',
-                'Incoming (not editable)': '',
-                'Unavailable (not editable)': '',
-                'Committed (not editable)': '',
-                'Available (not editable)': '',
-                'On hand (current)': '',
-                'On hand (new)': item.quantity
+    // Find DISCONTINUED colorways (in yesterday but NOT in today)
+    const discontinuedColorways = [];
+    
+    yesterdayColorways.forEach((variants, handle) => {
+        if (!todayColorways.has(handle)) {
+            // This colorway is discontinued
+            discontinuedColorways.push({
+                handle: handle,
+                title: variants[0].Title,
+                variants: variants
             });
         }
-        
-        // Add discontinued products with 0 quantity
-        for (const item of comparison.discontinued) {
-            allRows.push({
-                Handle: item.handle,
-                Title: item.title,
-                'Option1 Name': 'Size',
-                'Option1 Value': item.size,
-                'Option2 Name': '',
-                'Option2 Value': '',
-                'Option3 Name': '',
-                'Option3 Value': '',
-                SKU: item.sku,
-                Barcode: '',
-                'HS Code': '',
-                COO: '',
-                Location: 'Needham',
-                'Bin name': '',
-                'Incoming (not editable)': '',
-                'Unavailable (not editable)': '',
-                'Committed (not editable)': '',
-                'Available (not editable)': '',
-                'On hand (current)': '',
-                'On hand (new)': 0
+    });
+    
+    // Find NEW colorways (in today but NOT in yesterday)
+    const newColorways = [];
+    
+    todayColorways.forEach((variants, handle) => {
+        if (!yesterdayColorways.has(handle)) {
+            // This is a new colorway
+            newColorways.push({
+                handle: handle,
+                title: variants[0].Title,
+                variants: variants
             });
         }
+    });
+    
+    // Sort alphabetically by title
+    discontinuedColorways.sort((a, b) => a.title.localeCompare(b.title));
+    newColorways.sort((a, b) => a.title.localeCompare(b.title));
+    
+    console.log(`Found ${discontinuedColorways.length} discontinued colorways`);
+    console.log(`Found ${newColorways.length} new colorways`);
+    
+    return {
+        discontinuedColorways,
+        newColorways,
+        yesterdayColorways,
+        todayColorways
+    };
+}
+
+function parseShopifyCSV(csvText) {
+    const lines = csvText.trim().split('\n');
+    const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
+    
+    const handleIndex = headers.indexOf('Handle');
+    const titleIndex = headers.indexOf('Title');
+    const variantSKUIndex = headers.indexOf('Variant SKU');
+    const option1Index = headers.indexOf('Option1 Value'); // Size
+    const variantInventoryQtyIndex = headers.indexOf('Variant Inventory Qty');
+    
+    const variants = [];
+    
+    for (let i = 1; i < lines.length; i++) {
+        const line = lines[i];
+        if (!line.trim()) continue;
         
-        console.log(`Generated CSV with ${allRows.length} rows (${this.todayInventory ? Object.keys(this.todayInventory).length : 0} current + ${comparison.discontinued.length} discontinued)`);
+        const values = parseCSVLine(line);
         
-        return Papa.unparse(allRows, {
-            quotes: true,
-            quoteChar: '"',
-            delimiter: ','
-        });
+        const handle = values[handleIndex]?.trim().replace(/^"|"$/g, '') || '';
+        const title = values[titleIndex]?.trim().replace(/^"|"$/g, '') || '';
+        const sku = values[variantSKUIndex]?.trim().replace(/^"|"$/g, '') || '';
+        const size = values[option1Index]?.trim().replace(/^"|"$/g, '') || '';
+        const qty = values[variantInventoryQtyIndex]?.trim().replace(/^"|"$/g, '') || '0';
+        
+        if (handle && size) {
+            variants.push({
+                Handle: handle,
+                Title: title,
+                SKU: sku,
+                Size: size,
+                Quantity: parseInt(qty) || 0
+            });
+        }
     }
-};
+    
+    return variants;
+}
+
+function parseCSVLine(line) {
+    const values = [];
+    let current = '';
+    let inQuotes = false;
+    
+    for (let i = 0; i < line.length; i++) {
+        const char = line[i];
+        
+        if (char === '"') {
+            if (inQuotes && line[i + 1] === '"') {
+                current += '"';
+                i++;
+            } else {
+                inQuotes = !inQuotes;
+            }
+        } else if (char === ',' && !inQuotes) {
+            values.push(current);
+            current = '';
+        } else {
+            current += char;
+        }
+    }
+    values.push(current);
+    
+    return values;
+}
+
+function generateReport(comparison) {
+    const { discontinuedColorways, newColorways } = comparison;
+    
+    let report = '';
+    
+    // Header
+    report += '======================================================================\n';
+    report += '              RUN HOUSE INVENTORY COMPARISON REPORT\n';
+    report += '======================================================================\n\n';
+    
+    // Discontinued Colorways Section
+    report += `DISCONTINUED COLORWAYS\n`;
+    report += `======================================================================\n`;
+    report += `${discontinuedColorways.length} colorways discontinued\n`;
+    report += `${discontinuedColorways.reduce((sum, cw) => sum + cw.variants.length, 0)} total variants\n\n`;
+    
+    if (discontinuedColorways.length > 0) {
+        discontinuedColorways.forEach(colorway => {
+            report += `${colorway.title}\n`;
+            report += `  Sizes: `;
+            const sizeList = colorway.variants
+                .sort((a, b) => parseFloat(a.Size) - parseFloat(b.Size))
+                .map(v => `${v.Size} (${v.Quantity})`)
+                .join(', ');
+            report += sizeList + '\n';
+            report += `  Total variants: ${colorway.variants.length}\n\n`;
+        });
+    } else {
+        report += 'No discontinued colorways found.\n\n';
+    }
+    
+    report += '\n';
+    
+    // New Colorways Section
+    report += `NEW COLORWAYS\n`;
+    report += `======================================================================\n`;
+    report += `${newColorways.length} new colorways detected\n`;
+    report += `${newColorways.reduce((sum, cw) => sum + cw.variants.length, 0)} total variants\n\n`;
+    
+    if (newColorways.length > 0) {
+        newColorways.forEach(colorway => {
+            report += `${colorway.title}\n`;
+            report += `  Sizes: `;
+            const sizeList = colorway.variants
+                .sort((a, b) => parseFloat(a.Size) - parseFloat(b.Size))
+                .map(v => `${v.Size} (${v.Quantity})`)
+                .join(', ');
+            report += sizeList + '\n';
+            report += `  Total variants: ${colorway.variants.length}\n\n`;
+        });
+    } else {
+        report += 'No new colorways found.\n\n';
+    }
+    
+    report += '======================================================================\n';
+    
+    return report;
+}
+
+function generateDiscontinuedCSV(discontinuedColorways) {
+    if (discontinuedColorways.length === 0) {
+        return null;
+    }
+    
+    // Shopify CSV format
+    let csv = 'Handle,Title,Body (HTML),Vendor,Product Category,Type,Tags,Published,Option1 Name,Option1 Value,Variant SKU,Variant Grams,Variant Inventory Tracker,Variant Inventory Qty,Variant Inventory Policy,Variant Fulfillment Service,Variant Price,Variant Compare At Price,Variant Requires Shipping,Variant Taxable,Variant Barcode,Image Src,Image Position,Image Alt Text,Gift Card,SEO Title,SEO Description,Google Shopping / Google Product Category,Google Shopping / Gender,Google Shopping / Age Group,Google Shopping / MPN,Google Shopping / Condition,Google Shopping / Custom Product,Google Shopping / Custom Label 0,Google Shopping / Custom Label 1,Google Shopping / Custom Label 2,Google Shopping / Custom Label 3,Google Shopping / Custom Label 4,Variant Image,Variant Weight Unit,Variant Tax Code,Cost per item,Included / United States,Price / United States,Compare At Price / United States,Included / International,Price / International,Compare At Price / International,Status\n';
+    
+    discontinuedColorways.forEach(colorway => {
+        colorway.variants.forEach((variant, index) => {
+            const isFirstVariant = index === 0;
+            
+            csv += `"${variant.Handle}",`;
+            csv += `"${isFirstVariant ? variant.Title : ''}",`;
+            csv += `"",`; // Body (HTML)
+            csv += `"",`; // Vendor
+            csv += `"",`; // Product Category
+            csv += `"",`; // Type
+            csv += `"",`; // Tags
+            csv += `"TRUE",`; // Published
+            csv += `"${isFirstVariant ? 'Size' : ''}",`; // Option1 Name
+            csv += `"${variant.Size}",`; // Option1 Value
+            csv += `"${variant.SKU}",`; // Variant SKU
+            csv += `"0",`; // Variant Grams
+            csv += `"shopify",`; // Variant Inventory Tracker
+            csv += `"0",`; // Variant Inventory Qty - SET TO 0
+            csv += `"deny",`; // Variant Inventory Policy
+            csv += `"manual",`; // Variant Fulfillment Service
+            csv += `"",`; // Variant Price
+            csv += `"",`; // Variant Compare At Price
+            csv += `"TRUE",`; // Variant Requires Shipping
+            csv += `"TRUE",`; // Variant Taxable
+            csv += `"",`; // Variant Barcode
+            csv += `"",`; // Image Src
+            csv += `"",`; // Image Position
+            csv += `"",`; // Image Alt Text
+            csv += `"FALSE",`; // Gift Card
+            csv += `"",`; // SEO Title
+            csv += `"",`; // SEO Description
+            csv += `"",`; // Google Shopping / Google Product Category
+            csv += `"",`; // Google Shopping / Gender
+            csv += `"",`; // Google Shopping / Age Group
+            csv += `"",`; // Google Shopping / MPN
+            csv += `"",`; // Google Shopping / Condition
+            csv += `"",`; // Google Shopping / Custom Product
+            csv += `"",`; // Google Shopping / Custom Label 0
+            csv += `"",`; // Google Shopping / Custom Label 1
+            csv += `"",`; // Google Shopping / Custom Label 2
+            csv += `"",`; // Google Shopping / Custom Label 3
+            csv += `"",`; // Google Shopping / Custom Label 4
+            csv += `"",`; // Variant Image
+            csv += `"lb",`; // Variant Weight Unit
+            csv += `"",`; // Variant Tax Code
+            csv += `"",`; // Cost per item
+            csv += `"TRUE",`; // Included / United States
+            csv += `"",`; // Price / United States
+            csv += `"",`; // Compare At Price / United States
+            csv += `"FALSE",`; // Included / International
+            csv += `"",`; // Price / International
+            csv += `"",`; // Compare At Price / International
+            csv += `"active"`; // Status
+            csv += '\n';
+        });
+    });
+    
+    return csv;
+}
+
+function generateNewColorwaysCSV(newColorways) {
+    if (newColorways.length === 0) {
+        return null;
+    }
+    
+    // Shopify CSV format
+    let csv = 'Handle,Title,Body (HTML),Vendor,Product Category,Type,Tags,Published,Option1 Name,Option1 Value,Variant SKU,Variant Grams,Variant Inventory Tracker,Variant Inventory Qty,Variant Inventory Policy,Variant Fulfillment Service,Variant Price,Variant Compare At Price,Variant Requires Shipping,Variant Taxable,Variant Barcode,Image Src,Image Position,Image Alt Text,Gift Card,SEO Title,SEO Description,Google Shopping / Google Product Category,Google Shopping / Gender,Google Shopping / Age Group,Google Shopping / MPN,Google Shopping / Condition,Google Shopping / Custom Product,Google Shopping / Custom Label 0,Google Shopping / Custom Label 1,Google Shopping / Custom Label 2,Google Shopping / Custom Label 3,Google Shopping / Custom Label 4,Variant Image,Variant Weight Unit,Variant Tax Code,Cost per item,Included / United States,Price / United States,Compare At Price / United States,Included / International,Price / International,Compare At Price / International,Status\n';
+    
+    newColorways.forEach(colorway => {
+        colorway.variants.forEach((variant, index) => {
+            const isFirstVariant = index === 0;
+            
+            csv += `"${variant.Handle}",`;
+            csv += `"${isFirstVariant ? variant.Title : ''}",`;
+            csv += `"",`; // Body (HTML)
+            csv += `"",`; // Vendor
+            csv += `"",`; // Product Category
+            csv += `"",`; // Type
+            csv += `"",`; // Tags
+            csv += `"TRUE",`; // Published
+            csv += `"${isFirstVariant ? 'Size' : ''}",`; // Option1 Name
+            csv += `"${variant.Size}",`; // Option1 Value
+            csv += `"${variant.SKU}",`; // Variant SKU
+            csv += `"0",`; // Variant Grams
+            csv += `"shopify",`; // Variant Inventory Tracker
+            csv += `"${variant.Quantity}",`; // Variant Inventory Qty - ACTUAL QTY
+            csv += `"deny",`; // Variant Inventory Policy
+            csv += `"manual",`; // Variant Fulfillment Service
+            csv += `"",`; // Variant Price
+            csv += `"",`; // Variant Compare At Price
+            csv += `"TRUE",`; // Variant Requires Shipping
+            csv += `"TRUE",`; // Variant Taxable
+            csv += `"",`; // Variant Barcode
+            csv += `"",`; // Image Src
+            csv += `"",`; // Image Position
+            csv += `"",`; // Image Alt Text
+            csv += `"FALSE",`; // Gift Card
+            csv += `"",`; // SEO Title
+            csv += `"",`; // SEO Description
+            csv += `"",`; // Google Shopping / Google Product Category
+            csv += `"",`; // Google Shopping / Gender
+            csv += `"",`; // Google Shopping / Age Group
+            csv += `"",`; // Google Shopping / MPN
+            csv += `"",`; // Google Shopping / Condition
+            csv += `"",`; // Google Shopping / Custom Product
+            csv += `"",`; // Google Shopping / Custom Label 0
+            csv += `"",`; // Google Shopping / Custom Label 1
+            csv += `"",`; // Google Shopping / Custom Label 2
+            csv += `"",`; // Google Shopping / Custom Label 3
+            csv += `"",`; // Google Shopping / Custom Label 4
+            csv += `"",`; // Variant Image
+            csv += `"lb",`; // Variant Weight Unit
+            csv += `"",`; // Variant Tax Code
+            csv += `"",`; // Cost per item
+            csv += `"TRUE",`; // Included / United States
+            csv += `"",`; // Price / United States
+            csv += `"",`; // Compare At Price / United States
+            csv += `"FALSE",`; // Included / International
+            csv += `"",`; // Price / International
+            csv += `"",`; // Compare At Price / International
+            csv += `"active"`; // Status
+            csv += '\n';
+        });
+    });
+    
+    return csv;
+}
