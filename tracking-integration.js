@@ -1,5 +1,46 @@
 // Simple Tracking Integration - Just drag and drop CSVs
 
+// Global functions for HTML onclick handlers
+window.clearYesterday = function() {
+    SimpleInventoryTracker.yesterdayInventory = null;
+    document.getElementById('yesterday-file').value = '';
+    document.getElementById('yesterday-uploaded').style.display = 'none';
+    document.getElementById('yesterday-dropzone').style.display = 'block';
+    document.getElementById('simple-comparison-report').style.display = 'none';
+    document.getElementById('download-updated-section').style.display = 'none';
+};
+
+window.clearToday = function() {
+    SimpleInventoryTracker.todayInventory = null;
+    document.getElementById('today-file').value = '';
+    document.getElementById('today-uploaded').style.display = 'none';
+    document.getElementById('today-dropzone').style.display = 'block';
+    document.getElementById('simple-comparison-report').style.display = 'none';
+    document.getElementById('download-updated-section').style.display = 'none';
+};
+
+window.downloadUpdatedCSV = function() {
+    const csvData = SimpleInventoryTracker.generateUpdatedCSV();
+    
+    if (!csvData) {
+        alert('Error generating CSV. Please make sure both files are uploaded.');
+        return;
+    }
+    
+    const date = new Date().toISOString().split('T')[0];
+    const filename = `combined-inventory-${date}.csv`;
+    
+    const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+};
+
 function setupSimpleTracking() {
     // Setup Yesterday dropzone
     const yesterdayDropzone = document.getElementById('yesterday-dropzone');
@@ -107,46 +148,6 @@ function showSimpleComparison() {
     
     // Show download button
     document.getElementById('download-updated-section').style.display = 'block';
-}
-
-function clearYesterday() {
-    SimpleInventoryTracker.yesterdayInventory = null;
-    document.getElementById('yesterday-file').value = '';
-    document.getElementById('yesterday-uploaded').style.display = 'none';
-    document.getElementById('yesterday-dropzone').style.display = 'block';
-    document.getElementById('simple-comparison-report').style.display = 'none';
-    document.getElementById('download-updated-section').style.display = 'none';
-}
-
-function clearToday() {
-    SimpleInventoryTracker.todayInventory = null;
-    document.getElementById('today-file').value = '';
-    document.getElementById('today-uploaded').style.display = 'none';
-    document.getElementById('today-dropzone').style.display = 'block';
-    document.getElementById('simple-comparison-report').style.display = 'none';
-    document.getElementById('download-updated-section').style.display = 'none';
-}
-
-function downloadUpdatedCSV() {
-    const csvData = SimpleInventoryTracker.generateUpdatedCSV();
-    
-    if (!csvData) {
-        alert('Error generating CSV. Please make sure both files are uploaded.');
-        return;
-    }
-    
-    const date = new Date().toISOString().split('T')[0];
-    const filename = `combined-inventory-${date}.csv`;
-    
-    const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', filename);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
 }
 
 // Initialize on page load
