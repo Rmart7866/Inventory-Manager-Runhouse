@@ -834,7 +834,7 @@
                 <div class="comparison-report" id="comparison-report"></div>
                 
                 <!-- Download Section -->
-                <div id="download-section" style="display: none; margin-top: 30px;">
+                <div id="tracking-download-section" style="display: none; margin-top: 30px;">
                     <div style="text-align: center; margin-bottom: 20px;">
                         <h3 style="font-size: 24px; font-weight: 700; color: #1a1a1a; margin-bottom: 8px;">Download CSV Files</h3>
                         <p style="color: #6c757d; font-size: 14px;">Two separate files for easy Shopify uploading</p>
@@ -1435,7 +1435,7 @@ https://fasttrack.brooksrunning.com/browse/search(overlay:cs/brooks/120427/12042
 
         function hideResults() {
             document.getElementById('comparison-report').style.display = 'none';
-            document.getElementById('download-section').style.display = 'none';
+            document.getElementById('tracking-download-section').style.display = 'none';
             comparisonResult = null;
         }
 
@@ -1450,7 +1450,7 @@ https://fasttrack.brooksrunning.com/browse/search(overlay:cs/brooks/120427/12042
                 reportEl.style.display = 'block';
                 
                 // Show download section
-                document.getElementById('download-section').style.display = 'block';
+                document.getElementById('tracking-download-section').style.display = 'block';
                 
                 // Enable/disable download buttons
                 const hasDiscontinued = comparisonResult.discontinuedColorways.length > 0;
@@ -1774,5 +1774,7 @@ https://fasttrack.brooksrunning.com/browse/search(overlay:cs/brooks/120427/12042
     </script>
     <!-- END INVENTORY COMPARISON SCRIPTS -->
     <script src="main.js"></script>
+</body>
+</html>
 </body>
 </html>
