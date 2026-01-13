@@ -1,4 +1,4 @@
-// Saucony Converter Logic - UPDATED WITH RIDE 19 AND WIDE WIDTH SUPPORT
+// Saucony Converter Logic - UPDATED WITH RIDE 19 CONSISTENT GENDER SUFFIXES
 const SauconyConverter = {
     productsData: [],
     inventoryData: [],
@@ -126,27 +126,9 @@ const SauconyConverter = {
         'Ride 18|Undyed Grey|men': 'ride-18-undyed-grey-men',
         'Ride 18|White Black|men': 'ride-18-white-black',
         
-        // Ride 19 - Women's
-        'Ride 19|Black Silver|women': 'ride-19-black-silver-women',
-        'Ride 19|Cloud Aqua|women': 'ride-19-cloud-aqua',
-        'Ride 19|Fire Orchid|women': 'ride-19-fire-orchid',
-        'Ride 19|Hush|women': 'ride-19-hush',
-        'Ride 19|Mist Cameo|women': 'ride-19-mist-cameo',
-        'Ride 19|Vanilla Mauve|women': 'ride-19-vanilla-mauve',
-        'Ride 19|White Silk|women': 'ride-19-white-silk',
-        'Ride 19|White Splash|women': 'ride-19-white-splash',
-        
-        // Ride 19 - Men's
-        'Ride 19|Black Pewter|men': 'ride-19-black-pewter',
-        'Ride 19|Black Silver|men': 'ride-19-black-silver-men',
-        'Ride 19|Cobalt Slime|men': 'ride-19-cobalt-slime',
-        'Ride 19|Flint Shadow|men': 'ride-19-flint-shadow',
-        'Ride 19|Ivory Storm|men': 'ride-19-ivory-storm',
-        'Ride 19|Navy Gum|men': 'ride-19-navy-gum',
-        'Ride 19|Shadow Black|men': 'ride-19-shadow-black',
-        'Ride 19|Triple Black|men': 'ride-19-triple-black',
-        'Ride 19|White Black|men': 'ride-19-white-black',
-        'Ride 19|White Sage|men': 'ride-19-white-sage',
+        // Ride 19 - NOT in existingHandles
+        // All Ride 19 products follow the new standard format (product-color-gender)
+        // and are handled automatically by the new product logic
         
         // Triumph 23 - Women's
         'Triumph 23|Cloud Grey|women': 'triumph-23-cloud-grey',
