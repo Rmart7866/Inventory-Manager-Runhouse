@@ -27,99 +27,140 @@ const SauconyConverter = {
     
     // EXISTING SHOPIFY HANDLES
     existingHandles: {
+        // Endorphin Elite 2 - Unisex
         'Endorphin Elite 2|Citron Black|unisex': 'endorphin-elite-2-citron-black',
         'Endorphin Elite 2|Coral White|unisex': 'endorphin-elite-2-coral-white',
         'Endorphin Elite 2|Fog Cinder|unisex': 'endorphin-elite-2-fog-cinder',
         'Endorphin Elite 2|White Mutant|unisex': 'endorphin-elite-2-white-mutant',
         'Endorphin Elite 2|White Peel|unisex': 'endorphin-elite-2-white-peel',
+        
+        // Endorphin Pro 4 - Women's
         'Endorphin Pro 4|Black Vizired|women': 'endorphin-pro-4-black-vizired',
-        'Endorphin Pro 4|Black Vo2|men': 'endorphin-pro-4-black-vo2',
-        'Endorphin Pro 4|Cavern Purple|men': 'endorphin-pro-4-cavern-purple',
         'Endorphin Pro 4|Cavern Violet|women': 'endorphin-pro-4-cavern-violet',
         'Endorphin Pro 4|Citron Silver|women': 'endorphin-pro-4-citron-silver',
         'Endorphin Pro 4|Coral|women': 'endorphin-pro-4-coral',
         'Endorphin Pro 4|Fog Peel|women': 'endorphin-pro-4-fog-peel',
-        'Endorphin Pro 4|Lapis Citron|men': 'endorphin-pro-4-lapis-citron',
         'Endorphin Pro 4|Magenta|women': 'endorphin-pro-4-magenta',
         'Endorphin Pro 4|Mirage Citron|women': 'endorphin-pro-4-mirage-citron',
         'Endorphin Pro 4|Mist|women': 'endorphin-pro-4-mist',
-        'Endorphin Pro 4|Navy Citron|men': 'endorphin-pro-4-navy-citron',
-        'Endorphin Pro 4|Olivine Black|men': 'endorphin-pro-4-olivine-black',
-        'Endorphin Pro 4|Pepper Navy|men': 'endorphin-pro-4-pepper-navy',
-        'Endorphin Pro 4|Viziorange|men': 'endorphin-pro-4-viziorange',
         'Endorphin Pro 4|Vizired|women': 'endorphin-pro-4-vizired',
-        'Endorphin Pro 4|White Black|men': 'endorphin-pro-4-white-black',
         'Endorphin Pro 4|White Crocus|women': 'endorphin-pro-4-white-crocus',
-        'Endorphin Pro 4|White Gold|men': 'endorphin-pro-4-white-gold',
         'Endorphin Pro 4|White Mutant|women': 'endorphin-pro-4-white-mutant',
         'Endorphin Pro 4|White Shadow|women': 'endorphin-pro-4-white-shadow',
         'Endorphin Pro 4|White Silver|women': 'endorphin-pro-4-white-silver',
         'Endorphin Pro 4|White Violet|women': 'endorphin-pro-4-white-violet',
-        'Guide 18|Autumn Amber|men': 'guide-18-autumn-amber',
+        
+        // Endorphin Pro 4 - Men's
+        'Endorphin Pro 4|Black Vo2|men': 'endorphin-pro-4-black-vo2',
+        'Endorphin Pro 4|Cavern Purple|men': 'endorphin-pro-4-cavern-purple',
+        'Endorphin Pro 4|Lapis Citron|men': 'endorphin-pro-4-lapis-citron',
+        'Endorphin Pro 4|Navy Citron|men': 'endorphin-pro-4-navy-citron',
+        'Endorphin Pro 4|Olivine Black|men': 'endorphin-pro-4-olivine-black',
+        'Endorphin Pro 4|Pepper Navy|men': 'endorphin-pro-4-pepper-navy',
+        'Endorphin Pro 4|Viziorange|men': 'endorphin-pro-4-viziorange',
+        'Endorphin Pro 4|White Black|men': 'endorphin-pro-4-white-black',
+        'Endorphin Pro 4|White Gold|men': 'endorphin-pro-4-white-gold',
+        
+        // Guide 18 - Women's
         'Guide 18|Ballad Skydiver|women': 'guide-18-ballad-skydiver',
-        'Guide 18|Black Lapis|men': 'guide-18-black-lapis',
         'Guide 18|Black White|women': 'guide-18-black-white',
-        'Guide 18|Bone|men': 'guide-18-bone',
         'Guide 18|Cameo Terra|women': 'guide-18-cameo-terra',
-        'Guide 18|Cloud Black|men': 'guide-18-cloud-black',
-        'Guide 18|Cloud Citron|men': 'guide-18-cloud-citron',
         'Guide 18|Cloud Dream|women': 'guide-18-cloud-dream',
-        'Guide 18|Cloud Olive|men': 'guide-18-cloud-olive',
         'Guide 18|Cloud|women': 'guide-18-cloud',
-        'Guide 18|Flint Navy|men': 'guide-18-flint-navy',
-        'Guide 18|Fossil Dusk|men': 'guide-18-fossil-dusk',
         'Guide 18|Hemlock Bloom|women': 'guide-18-hemlock-bloom',
         'Guide 18|Ivory|women': 'guide-18-ivory',
         'Guide 18|Moon Quail|women': 'guide-18-moon-quail',
         'Guide 18|Navy Apricot|women': 'guide-18-navy-apricot',
         'Guide 18|Navy Orchid|women': 'guide-18-navy-orchid',
-        'Guide 18|Navy Skydiver|men': 'guide-18-navy-skydiver',
         'Guide 18|Oat Quartz|women': 'guide-18-oat-quartz',
         'Guide 18|Peach Sunny|women': 'guide-18-peach-sunny',
-        'Guide 18|Shadow Gum|men': 'guide-18-shadow-gum',
-        'Guide 18|Shadow Vizi|men': 'guide-18-shadow-vizi',
         'Guide 18|Triple Black|women': 'guide-18-triple-black',
         'Guide 18|White Fuchsia|women': 'guide-18-white-fuchsia',
         'Guide 18|White Ice Melt|women': 'guide-18-white-ice-melt',
         'Guide 18|White Mist|women': 'guide-18-white-mist',
+        
+        // Guide 18 - Men's
+        'Guide 18|Autumn Amber|men': 'guide-18-autumn-amber',
+        'Guide 18|Black Lapis|men': 'guide-18-black-lapis',
+        'Guide 18|Bone|men': 'guide-18-bone',
+        'Guide 18|Cloud Black|men': 'guide-18-cloud-black',
+        'Guide 18|Cloud Citron|men': 'guide-18-cloud-citron',
+        'Guide 18|Cloud Olive|men': 'guide-18-cloud-olive',
+        'Guide 18|Flint Navy|men': 'guide-18-flint-navy',
+        'Guide 18|Fossil Dusk|men': 'guide-18-fossil-dusk',
+        'Guide 18|Navy Skydiver|men': 'guide-18-navy-skydiver',
+        'Guide 18|Shadow Gum|men': 'guide-18-shadow-gum',
+        'Guide 18|Shadow Vizi|men': 'guide-18-shadow-vizi',
         'Guide 18|White Navy|men': 'guide-18-white-navy',
         'Guide 18|White Peel|men': 'guide-18-white-peel',
-        'Ride 18|Arctic Barley|men': 'ride-18-arctic-barley',
-        'Ride 18|Azurite Peel|men': 'ride-18-azurite-peel',
+        
+        // Ride 18 - Women's
         'Ride 18|Black Gum|women': 'ride-18-black-gum',
-        'Ride 18|Black Shadow|men': 'ride-18-black-shadow',
-        'Ride 18|Black Skydiver|men': 'ride-18-black-skydiver',
         'Ride 18|Black White|women': 'ride-18-black-white',
         'Ride 18|Cameo Peony|women': 'ride-18-cameo-peony',
-        'Ride 18|Cinder Black|men': 'ride-18-cinder-black',
         'Ride 18|Cloud Dream|women': 'ride-18-cloud-dream',
-        'Ride 18|Cloud Dusk|men': 'ride-18-cloud-dusk',
         'Ride 18|Cloud Silver|women': 'ride-18-cloud-silver',
-        'Ride 18|Flint Slate|men': 'ride-18-flint-slate',
         'Ride 18|Fog Void|women': 'ride-18-fog-void',
-        'Ride 18|Navy|men': 'ride-18-navy',
-        'Ride 18|Olive Black|men': 'ride-18-olive-black',
         'Ride 18|Opal Sunflower|women': 'ride-18-opal-sunflower',
         'Ride 18|Peach Blossom|women': 'ride-18-peach-blossom',
         'Ride 18|Reverie|women': 'ride-18-reverie',
-        'Ride 18|Shadow Sage|men': 'ride-18-shadow-sage',
         'Ride 18|Tempest|women': 'ride-18-tempest',
         'Ride 18|Terra Sky|women': 'ride-18-terra-sky',
         'Ride 18|Undyed Grey|women': 'ride-18-undyed-grey',
-        'Ride 18|Undyed Grey|men': 'ride-18-undyed-grey-men',
         'Ride 18|Undyed Meadow|women': 'ride-18-undyed-meadow',
         'Ride 18|Violet Bloom|women': 'ride-18-violet-bloom',
-        'Ride 18|White Black|men': 'ride-18-white-black',
         'Ride 18|White Indigo|women': 'ride-18-white-indigo',
         'Ride 18|White Sky|women': 'ride-18-white-sky',
+        
+        // Ride 18 - Men's
+        'Ride 18|Arctic Barley|men': 'ride-18-arctic-barley',
+        'Ride 18|Azurite Peel|men': 'ride-18-azurite-peel',
+        'Ride 18|Black Shadow|men': 'ride-18-black-shadow',
+        'Ride 18|Black Skydiver|men': 'ride-18-black-skydiver',
+        'Ride 18|Cinder Black|men': 'ride-18-cinder-black',
+        'Ride 18|Cloud Dusk|men': 'ride-18-cloud-dusk',
+        'Ride 18|Flint Slate|men': 'ride-18-flint-slate',
+        'Ride 18|Navy|men': 'ride-18-navy',
+        'Ride 18|Olive Black|men': 'ride-18-olive-black',
+        'Ride 18|Shadow Sage|men': 'ride-18-shadow-sage',
+        'Ride 18|Undyed Grey|men': 'ride-18-undyed-grey-men',
+        'Ride 18|White Black|men': 'ride-18-white-black',
+        
+        // Ride 19 - Women's
+        'Ride 19|Black Silver|women': 'ride-19-black-silver-women',
+        'Ride 19|Cloud Aqua|women': 'ride-19-cloud-aqua',
+        'Ride 19|Fire Orchid|women': 'ride-19-fire-orchid',
+        'Ride 19|Hush|women': 'ride-19-hush',
+        'Ride 19|Mist Cameo|women': 'ride-19-mist-cameo',
+        'Ride 19|Vanilla Mauve|women': 'ride-19-vanilla-mauve',
+        'Ride 19|White Silk|women': 'ride-19-white-silk',
+        'Ride 19|White Splash|women': 'ride-19-white-splash',
+        
+        // Ride 19 - Men's
+        'Ride 19|Black Pewter|men': 'ride-19-black-pewter',
+        'Ride 19|Black Silver|men': 'ride-19-black-silver-men',
+        'Ride 19|Cobalt Slime|men': 'ride-19-cobalt-slime',
+        'Ride 19|Flint Shadow|men': 'ride-19-flint-shadow',
+        'Ride 19|Ivory Storm|men': 'ride-19-ivory-storm',
+        'Ride 19|Navy Gum|men': 'ride-19-navy-gum',
+        'Ride 19|Shadow Black|men': 'ride-19-shadow-black',
+        'Ride 19|Triple Black|men': 'ride-19-triple-black',
+        'Ride 19|White Black|men': 'ride-19-white-black',
+        'Ride 19|White Sage|men': 'ride-19-white-sage',
+        
+        // Triumph 23 - Women's
         'Triumph 23|Cloud Grey|women': 'triumph-23-cloud-grey',
         'Triumph 23|Fog Shadow|women': 'triumph-23-fog-shadow',
+        'Triumph 23|Stone Veil|women': 'triumph-23-stone-veil',
+        'Triumph 23|White Punch|women': 'triumph-23-white-punch',
+        
+        // Triumph 23 - Men's
         'Triumph 23|Olive Steel|men': 'triumph-23-olive-steel',
         'Triumph 23|Shadow Citron|men': 'triumph-23-shadow-citron',
-        'Triumph 23|Stone Veil|women': 'triumph-23-stone-veil',
         'Triumph 23|White Geo|men': 'triumph-23-white-geo',
-        'Triumph 23|White Punch|women': 'triumph-23-white-punch',
         'Triumph 23|White Shadow|men': 'triumph-23-white-shadow',
+        
+        // Triumph 23 GTX
         'Triumph 23 GTX|Sage|men': 'triumph-23-gtx-sage',
         'Triumph 23 GTX|Shadow Black|men': 'triumph-23-gtx-shadow-black',
         'Triumph 23 GTX|Stone Violet|women': 'triumph-23-gtx-stone-violet'
@@ -190,40 +231,30 @@ const SauconyConverter = {
         // Build lookup key for existing handles (without width for lookup)
         const lookupKey = `${formattedProductName}|${formattedColorName}|${genderType}`;
         
-        // Check if this exact product+color+gender exists in Shopify
+        // FIRST: Check if this exact product+color+gender exists in Shopify
         if (this.existingHandles[lookupKey]) {
             const baseHandle = this.existingHandles[lookupKey];
             // Add -wide suffix for wide width shoes
             return width === 'W' ? `${baseHandle}-wide` : baseHandle;
         }
         
-        // Generate base handle
+        // NEW PRODUCT LOGIC: Generate handle with gender suffix
+        // Generate base handle from product + color
         const baseHandle = (formattedProductName + "-" + formattedColorName)
             .toLowerCase()
             .replace(/[^a-z0-9]+/g, '-');
         
-        // Add -wide suffix for wide width shoes
-        const handleWithWidth = width === 'W' ? `${baseHandle}-wide` : baseHandle;
-        
-        // Check if the base handle exists for a different gender (only for standard width)
-        if (width !== 'W') {
-            const oppositeGender = genderType === 'men' ? 'women' : (genderType === 'women' ? 'men' : null);
-            if (oppositeGender) {
-                const oppositeKey = `${formattedProductName}|${formattedColorName}|${oppositeGender}`;
-                if (this.existingHandles[oppositeKey]) {
-                    // The opposite gender already exists with this handle, so add gender suffix to ours
-                    return `${baseHandle}-${genderType}`;
-                }
-            }
+        // For NEW products, ALWAYS add gender suffix (except unisex)
+        let handleWithGender = baseHandle;
+        if (genderType === 'men' || genderType === 'women') {
+            handleWithGender = `${baseHandle}-${genderType}`;
         }
+        // Unisex products don't get gender suffix
         
-        // For unisex, never add gender suffix
-        if (genderType === 'unisex') {
-            return handleWithWidth;
-        }
+        // Add -wide suffix for wide width shoes (after gender)
+        const finalHandle = width === 'W' ? `${handleWithGender}-wide` : handleWithGender;
         
-        // New product with no conflicts - use handle with width suffix if applicable
-        return handleWithWidth;
+        return finalHandle;
     },
     
     async convert(file) {
