@@ -23,6 +23,16 @@ const PumaConverter = {
                 bestFor: 'Tempo runs, interval training, races from 5K to marathon'
             }
         },
+        'Deviate Nitro 4': {
+            description: 'Push your limits with the Deviate Nitro 4, PUMA\'s latest evolution in carbon-plated racing excellence. This premium performance trainer features an innovative full-length carbon fiber PWRPLATE combined with dual-density NITRO Elite foam for explosive energy return and unmatched propulsion. The updated engineered mesh upper delivers exceptional breathability and a secure, race-ready fit, while the enhanced rocker geometry promotes smooth, efficient transitions. Built for serious runners who demand elite-level performance in training and racing.',
+            specs: { 
+                stack: '39/31mm', 
+                drop: '8mm', 
+                weight: '10.2 oz',
+                technology: 'Carbon fiber PWRPLATE, NITRO Elite foam, PUMAGRIP outsole',
+                bestFor: 'Tempo runs, interval training, races from 5K to marathon'
+            }
+        },
         'Magmax': {
             description: 'Maximum cushioning meets innovative design in the all-new Magmax. Engineered with PUMA\'s thickest stack height to date, this ultra-cushioned trainer features NITROFOAM™ technology for exceptional shock absorption and energy return. The wide platform base provides inherent stability, while the engineered mesh upper delivers a secure, comfortable fit. Whether you\'re logging easy miles or need all-day comfort, the Magmax offers plush cushioning without sacrificing responsiveness. Perfect for runners seeking maximum protection and comfort on their daily runs.',
             specs: { 
@@ -55,7 +65,7 @@ const PumaConverter = {
         }
     },
     
-    allowedProducts: ['Velocity Nitro 4', 'Deviate Nitro 3', 'MagMax Nitro 2', 'Magmax', 'Magnify Nitro 3'],
+    allowedProducts: ['Velocity Nitro 4', 'Deviate Nitro 3', 'Deviate Nitro 4', 'MagMax Nitro 2', 'Magmax', 'Magnify Nitro 3'],
     
     isAllowedProduct(productName) {
         if (!productName) return false;
@@ -77,12 +87,18 @@ const PumaConverter = {
             return true;
         }
         
-        // Check other products
-        if (nameLower.includes('velocity') && nameLower.includes('nitro') && nameLower.includes('4')) {
+        // Check for Deviate Nitro 4 BEFORE Deviate Nitro 3
+        if (nameLower.includes('deviate') && nameLower.includes('nitro') && nameLower.includes('4')) {
             return true;
         }
         
+        // Check for Deviate Nitro 3
         if (nameLower.includes('deviate') && nameLower.includes('nitro') && nameLower.includes('3')) {
+            return true;
+        }
+        
+        // Check Velocity Nitro 4
+        if (nameLower.includes('velocity') && nameLower.includes('nitro') && nameLower.includes('4')) {
             return true;
         }
         
@@ -109,13 +125,19 @@ const PumaConverter = {
             return 'Magnify Nitro 3';
         }
         
-        // Check other products
-        if (nameLower.includes('velocity') && nameLower.includes('nitro') && nameLower.includes('4')) {
-            return 'Velocity Nitro 4';
+        // Check for Deviate Nitro 4 BEFORE Deviate Nitro 3
+        if (nameLower.includes('deviate') && nameLower.includes('nitro') && nameLower.includes('4')) {
+            return 'Deviate Nitro 4';
         }
         
+        // Check for Deviate Nitro 3
         if (nameLower.includes('deviate') && nameLower.includes('nitro') && nameLower.includes('3')) {
             return 'Deviate Nitro 3';
+        }
+        
+        // Check Velocity Nitro 4
+        if (nameLower.includes('velocity') && nameLower.includes('nitro') && nameLower.includes('4')) {
+            return 'Velocity Nitro 4';
         }
         
         return null;
