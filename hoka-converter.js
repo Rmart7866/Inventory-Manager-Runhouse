@@ -1,4 +1,4 @@
-// HOKA Converter Logic - FIXED with Future Inventory Filtering
+// HOKA Converter Logic - UPDATED with All Product Variants
 const HokaConverter = {
     inventoryData: [],
     
@@ -88,6 +88,34 @@ const HokaConverter = {
             category: 'lifestyle/casual',
             bestFor: 'Everyday wear, casual walking, light trails, urban adventures'
         },
+        'Transport Chukka': {
+            description: 'Elevated style meets everyday comfort. The Transport Chukka features a mid-height design with HOKA cushioning for all-day wear.',
+            specs: { stack: '38/33mm', drop: '5mm', weight: '12 oz' },
+            features: ['Mid-height design', 'Versatile style', 'CMEVA midsole', 'Premium materials'],
+            category: 'lifestyle/casual',
+            bestFor: 'Everyday wear, casual occasions, urban exploration'
+        },
+        'Transport GTX': {
+            description: 'Weather-ready versatility with GORE-TEX waterproof protection. The Transport GTX keeps you dry and comfortable in any conditions.',
+            specs: { stack: '38/33mm', drop: '5mm', weight: '12.5 oz' },
+            features: ['GORE-TEX waterproof', 'Versatile design', 'All-weather protection', 'Durable construction'],
+            category: 'lifestyle/casual',
+            bestFor: 'Wet weather, everyday wear, light trails, all-season use'
+        },
+        'Transport Hike': {
+            description: 'Trail-ready comfort with enhanced support and traction. The Transport Hike brings HOKA cushioning to light hiking adventures.',
+            specs: { stack: '38/33mm', drop: '5mm', weight: '12.5 oz' },
+            features: ['Enhanced traction', 'Trail-ready', 'Supportive design', 'HOKA cushioning'],
+            category: 'lifestyle/hiking',
+            bestFor: 'Light hiking, trail walking, outdoor adventures'
+        },
+        'Transport Mid': {
+            description: 'Ankle support meets everyday comfort. The Transport Mid features a supportive mid-height design with signature HOKA cushioning.',
+            specs: { stack: '38/33mm', drop: '5mm', weight: '13 oz' },
+            features: ['Mid-height support', 'Ankle stability', 'Versatile design', 'Premium comfort'],
+            category: 'lifestyle/casual',
+            bestFor: 'Everyday wear, light hiking, urban exploration, extra ankle support'
+        },
         'Solimar': {
             description: 'A lightweight, responsive trainer designed for faster-paced runs. Features a propulsive midsole geometry and breathable engineered mesh upper.',
             specs: { stack: '30/25mm', drop: '5mm', weight: '7.2 oz' },
@@ -104,7 +132,11 @@ const HokaConverter = {
         }
     },
     
-    allowedProducts: ['Mach 6', 'Mach X 3', 'Skyward X', 'Clifton 10', 'Bondi 9', 'Arahi 8', 'Skyflow', 'Gaviota 5', 'Transport', 'Solimar', 'Speedgoat 6'],
+    allowedProducts: [
+        'Mach 6', 'Mach X 3', 'Skyward X', 'Clifton 10', 'Bondi 9', 'Arahi 8', 
+        'Skyflow', 'Gaviota 5', 'Transport', 'Transport Chukka', 'Transport GTX', 
+        'Transport Hike', 'Transport Mid', 'Solimar', 'Speedgoat 6'
+    ],
     
     isAllowedProduct(productName) {
         if (!productName) return false;
@@ -113,13 +145,22 @@ const HokaConverter = {
         // Strip gender prefix
         nameLower = nameLower.replace(/^[mwuy]\s+/, '');
         
-        // Strip width indicators and variants from product name before matching
-        nameLower = nameLower.replace(/ wide$/, '').replace(/ x-wide$/, '');
-        nameLower = nameLower.replace(/ gtx$/, '').replace(/ chukka$/, '').replace(/ hike$/, '').replace(/ mid$/, '');
+        // UPDATED: Don't strip variant suffixes - we want to match them exactly now
         
         if (nameLower.includes('arahi')) {
             return nameLower.includes('arahi 8') || nameLower.includes('arahi8');
         }
+        
+        // Check for Transport variants first (more specific)
+        if (nameLower.includes('transport')) {
+            if (nameLower.includes('chukka')) return this.allowedProducts.includes('Transport Chukka');
+            if (nameLower.includes('gtx')) return this.allowedProducts.includes('Transport GTX');
+            if (nameLower.includes('hike')) return this.allowedProducts.includes('Transport Hike');
+            if (nameLower.includes('mid')) return this.allowedProducts.includes('Transport Mid');
+            // Base Transport
+            return this.allowedProducts.includes('Transport');
+        }
+        
         return this.allowedProducts.some(allowed => {
             const allowedLower = allowed.toLowerCase();
             return nameLower.includes(allowedLower) || 
@@ -134,16 +175,24 @@ const HokaConverter = {
         // Strip gender prefix
         nameLower = nameLower.replace(/^[mwuy]\s+/, '');
         
-        // Strip width indicators and variants from product name before matching
-        nameLower = nameLower.replace(/ wide$/, '').replace(/ x-wide$/, '');
-        nameLower = nameLower.replace(/ gtx$/, '').replace(/ chukka$/, '').replace(/ hike$/, '').replace(/ mid$/, '');
-        
         if (nameLower.includes('arahi')) {
             if (nameLower.includes('arahi 8') || nameLower.includes('arahi8')) {
                 return 'Arahi 8';
             }
             return null;
         }
+        
+        // UPDATED: Check for Transport variants first (more specific matches before generic)
+        if (nameLower.includes('transport')) {
+            if (nameLower.includes('chukka')) return 'Transport Chukka';
+            if (nameLower.includes('gtx')) return 'Transport GTX';
+            if (nameLower.includes('hike')) return 'Transport Hike';
+            if (nameLower.includes('mid')) return 'Transport Mid';
+            // Base Transport (must be last to avoid matching variants)
+            return 'Transport';
+        }
+        
+        // Check other products
         for (const allowed of this.allowedProducts) {
             const allowedLower = allowed.toLowerCase();
             if (nameLower.includes(allowedLower) || 
