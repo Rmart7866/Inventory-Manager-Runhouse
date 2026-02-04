@@ -17,6 +17,33 @@ const ASICS_HANDLE_MAPPING = {
     // 'asics-gel-nimbus-25-mens-black-white': 'asics-gel-nimbus-25-black-white',
 };
 
+// ========== ASICS SIZE CONVERSION MAPPING ==========
+// Convert ASICS numeric sizes to Shopify unisex format
+const ASICS_SIZE_MAPPING = {
+    '3.5': 'M3.5/W5',
+    '4': 'M4/W5.5',
+    '4.5': 'M4.5/W6',
+    '5': 'M5/W6.5',
+    '5.5': 'M5.5/W7',
+    '6': 'M6/W7.5',
+    '6.5': 'M6.5/W8',
+    '7': 'M7/W8.5',
+    '7.5': 'M7.5/W9',
+    '8': 'M8/W9.5',
+    '8.5': 'M8.5/W10',
+    '9': 'M9/W10.5',
+    '9.5': 'M9.5/W11',
+    '10': 'M10/W11.5',
+    '10.5': 'M10.5/W12',
+    '11': 'M11/W12.5',
+    '11.5': 'M11.5/W13',
+    '12': 'M12/W13.5',
+    '12.5': 'M12.5/W14',
+    '13': 'M13',
+    '14': 'M14',
+    '15': 'M15'
+};
+
 // Function to replace handles in ASICS data
 function replaceAsicsHandles(inventory) {
     return inventory.map(row => {
@@ -29,6 +56,25 @@ function replaceAsicsHandles(inventory) {
             return {
                 ...row,
                 Handle: newHandle
+            };
+        }
+        
+        return row;
+    });
+}
+
+// Function to convert ASICS sizes to Shopify unisex format
+function convertAsicsSizes(inventory) {
+    return inventory.map(row => {
+        const originalSize = row['Option1 Value'];
+        
+        // Check if this size needs to be converted
+        if (ASICS_SIZE_MAPPING[originalSize]) {
+            const newSize = ASICS_SIZE_MAPPING[originalSize];
+            console.log(`Converting ASICS size: "${originalSize}" → "${newSize}"`);
+            return {
+                ...row,
+                'Option1 Value': newSize
             };
         }
         
@@ -422,10 +468,17 @@ async function convertBrand(brand) {
                 if (replacementCount > 0) {
                     console.log(`Found ${replacementCount} handles to replace in ASICS file`);
                     inventory = replaceAsicsHandles(inventory);
-                    BrandConverter.showStatus(brand, `Processed ${inventory.length} variants (${replacementCount} handles replaced)`, 'success');
-                } else {
-                    BrandConverter.showStatus(brand, `Processed ${inventory.length} variants (no handle replacements needed)`, 'success');
                 }
+                
+                // Convert ASICS sizes to Shopify unisex format
+                console.log(`Converting ASICS sizes to Shopify format`);
+                inventory = convertAsicsSizes(inventory);
+                
+                const sizeConversionCount = inventory.filter(row => 
+                    ASICS_SIZE_MAPPING[row['Option1 Value']]
+                ).length;
+                
+                BrandConverter.showStatus(brand, `Processed ${inventory.length} variants (${replacementCount} handles replaced, sizes converted to Shopify format)`, 'success');
             }
             // ========== END HANDLE REPLACEMENT ==========
             
@@ -508,6 +561,7 @@ function downloadUnified() {
             let brandInventory = [...BrandConverter.brands[brand].inventory];
             if (brand === 'asics') {
                 brandInventory = replaceAsicsHandles(brandInventory);
+                brandInventory = convertAsicsSizes(brandInventory);
             }
             allInventory.push(...brandInventory);
             selectedBrands.push(BrandConverter.getBrandDisplayName(brand));
