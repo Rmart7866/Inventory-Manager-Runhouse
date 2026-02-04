@@ -1,24 +1,20 @@
-// HOKA Converter Logic - UPDATED with All Product Variants
+// HOKA Converter Logic - UPDATED with Mach 7, Gaviota 6, Speedgoat 7
 const HokaConverter = {
     inventoryData: [],
     
     isAvailableNow(availableDateStr) {
         // Check if the available date is today or in the past
-        if (!availableDateStr) return true; // If no date provided, assume available
+        if (!availableDateStr) return true;
         
         try {
-            // Parse the date string (format: MM/DD/YYYY)
             const [month, day, year] = availableDateStr.toString().split('/').map(num => parseInt(num));
-            const availableDate = new Date(year, month - 1, day); // month is 0-indexed in JS
+            const availableDate = new Date(year, month - 1, day);
             
-            // Get today's date at midnight for comparison
             const today = new Date();
             today.setHours(0, 0, 0, 0);
             
-            // Only include if available date is today or earlier
             return availableDate <= today;
         } catch (e) {
-            // If we can't parse the date, assume it's available to be safe
             console.warn('Could not parse available date:', availableDateStr);
             return true;
         }
@@ -29,6 +25,13 @@ const HokaConverter = {
             description: 'Behold the lightest, most responsive Mach to date. This lively trainer has been fine-tuned for extra energy return with a super critical foam midsole and updated for enhanced durability with strategic rubber coverage in the outsole.',
             specs: { stack: '37/32mm', drop: '5mm', weight: '8.1 oz' },
             features: ['Lightweight design', 'Responsive cushioning', 'Daily trainer', 'Tempo runs'],
+            category: 'neutral daily trainer',
+            bestFor: 'Daily training, tempo runs, 5K to half marathon races'
+        },
+        'Mach 7': {
+            description: 'The lightest, most responsive Mach yet. The Mach 7 delivers an energetic ride with updated cushioning and improved durability, making it the perfect daily trainer for runners seeking speed and comfort.',
+            specs: { stack: '37/32mm', drop: '5mm', weight: '8.1 oz' },
+            features: ['Lightweight design', 'Responsive cushioning', 'Updated upper', 'Improved durability'],
             category: 'neutral daily trainer',
             bestFor: 'Daily training, tempo runs, 5K to half marathon races'
         },
@@ -81,6 +84,13 @@ const HokaConverter = {
             category: 'max stability trainer',
             bestFor: 'Daily training for severe overpronators, long runs, marathon training'
         },
+        'Gaviota 6': {
+            description: 'Maximum stability meets plush comfort in the Gaviota 6. This premium stability shoe features an enhanced H-Frame™ technology and generous cushioning to guide your gait while delivering a smooth, comfortable ride for overpronators.',
+            specs: { stack: '40/35mm', drop: '5mm', weight: '10.3 oz' },
+            features: ['Enhanced H-Frame technology', 'Plush cushioning', 'Updated upper', 'Early-stage Meta-Rocker'],
+            category: 'max stability trainer',
+            bestFor: 'Daily training for overpronators, long runs, marathon training'
+        },
         'Transport': {
             description: 'The perfect everyday shoe that transitions from trail to town. Combines outdoor-inspired design with HOKA cushioning for all-day comfort.',
             specs: { stack: '38/33mm', drop: '5mm', weight: '11.5 oz' },
@@ -129,13 +139,20 @@ const HokaConverter = {
             features: ['Vibram Megagrip outsole', 'Trail protection', 'Aggressive traction', 'Technical terrain'],
             category: 'trail running',
             bestFor: 'Technical trails, ultra-distance, mountain running, all-terrain adventures'
+        },
+        'Speedgoat 7': {
+            description: 'Named after legendary ultrarunner Karl "Speedgoat" Metzler, the Speedgoat 7 continues its legacy as the ultimate trail shoe for technical terrain. With enhanced traction, improved durability, and signature HOKA cushioning, this trail icon is ready for your toughest adventures.',
+            specs: { stack: '33/29mm', drop: '4mm', weight: '9.7 oz' },
+            features: ['Vibram Megagrip outsole', '5mm lugs', 'Enhanced upper', 'Protective toe cap'],
+            category: 'trail running',
+            bestFor: 'Technical trails, ultra-distance, mountain running, wet conditions'
         }
     },
     
     allowedProducts: [
-        'Mach 6', 'Mach X 3', 'Skyward X', 'Clifton 10', 'Bondi 9', 'Arahi 8', 
-        'Skyflow', 'Gaviota 5', 'Transport', 'Transport Chukka', 'Transport GTX', 
-        'Transport Hike', 'Transport Mid', 'Solimar', 'Speedgoat 6'
+        'Mach 6', 'Mach 7', 'Mach X 3', 'Skyward X', 'Clifton 10', 'Bondi 9', 'Arahi 8', 
+        'Skyflow', 'Gaviota 5', 'Gaviota 6', 'Transport', 'Transport Chukka', 'Transport GTX', 
+        'Transport Hike', 'Transport Mid', 'Solimar', 'Speedgoat 6', 'Speedgoat 7'
     ],
     
     isAllowedProduct(productName) {
@@ -145,10 +162,24 @@ const HokaConverter = {
         // Strip gender prefix
         nameLower = nameLower.replace(/^[mwuy]\s+/, '');
         
-        // UPDATED: Don't strip variant suffixes - we want to match them exactly now
-        
         if (nameLower.includes('arahi')) {
             return nameLower.includes('arahi 8') || nameLower.includes('arahi8');
+        }
+        
+        if (nameLower.includes('gaviota')) {
+            return nameLower.includes('gaviota 5') || nameLower.includes('gaviota5') ||
+                   nameLower.includes('gaviota 6') || nameLower.includes('gaviota6');
+        }
+        
+        if (nameLower.includes('mach')) {
+            return nameLower.includes('mach 6') || nameLower.includes('mach6') ||
+                   nameLower.includes('mach 7') || nameLower.includes('mach7') ||
+                   nameLower.includes('mach x') || nameLower.includes('machx');
+        }
+        
+        if (nameLower.includes('speedgoat')) {
+            return nameLower.includes('speedgoat 6') || nameLower.includes('speedgoat6') ||
+                   nameLower.includes('speedgoat 7') || nameLower.includes('speedgoat7');
         }
         
         // Check for Transport variants first (more specific)
@@ -157,7 +188,6 @@ const HokaConverter = {
             if (nameLower.includes('gtx')) return this.allowedProducts.includes('Transport GTX');
             if (nameLower.includes('hike')) return this.allowedProducts.includes('Transport Hike');
             if (nameLower.includes('mid')) return this.allowedProducts.includes('Transport Mid');
-            // Base Transport
             return this.allowedProducts.includes('Transport');
         }
         
@@ -182,13 +212,45 @@ const HokaConverter = {
             return null;
         }
         
-        // UPDATED: Check for Transport variants first (more specific matches before generic)
+        if (nameLower.includes('gaviota')) {
+            if (nameLower.includes('gaviota 6') || nameLower.includes('gaviota6')) {
+                return 'Gaviota 6';
+            }
+            if (nameLower.includes('gaviota 5') || nameLower.includes('gaviota5')) {
+                return 'Gaviota 5';
+            }
+            return null;
+        }
+        
+        if (nameLower.includes('mach')) {
+            if (nameLower.includes('mach x') || nameLower.includes('machx')) {
+                return 'Mach X 3';
+            }
+            if (nameLower.includes('mach 7') || nameLower.includes('mach7')) {
+                return 'Mach 7';
+            }
+            if (nameLower.includes('mach 6') || nameLower.includes('mach6')) {
+                return 'Mach 6';
+            }
+            return null;
+        }
+        
+        if (nameLower.includes('speedgoat')) {
+            if (nameLower.includes('speedgoat 7') || nameLower.includes('speedgoat7')) {
+                return 'Speedgoat 7';
+            }
+            if (nameLower.includes('speedgoat 6') || nameLower.includes('speedgoat6')) {
+                return 'Speedgoat 6';
+            }
+            return null;
+        }
+        
+        // Check for Transport variants first (more specific matches before generic)
         if (nameLower.includes('transport')) {
             if (nameLower.includes('chukka')) return 'Transport Chukka';
             if (nameLower.includes('gtx')) return 'Transport GTX';
             if (nameLower.includes('hike')) return 'Transport Hike';
             if (nameLower.includes('mid')) return 'Transport Mid';
-            // Base Transport (must be last to avoid matching variants)
             return 'Transport';
         }
         
@@ -206,12 +268,10 @@ const HokaConverter = {
     formatGender(division) {
         if (!division) return '';
         const divStr = division.toString().trim();
-        // Keep the apostrophe for handle generation
         if (divStr.toLowerCase() === "women's" || divStr.toLowerCase() === "womens" || divStr === "W") return "Women's";
         if (divStr.toLowerCase() === "men's" || divStr.toLowerCase() === "mens" || divStr === "M") return "Men's";
         if (divStr.toLowerCase() === "youth" || divStr.toLowerCase() === "kids") return 'Youth';
         if (divStr.toLowerCase() === "unisex" || divStr === "U") return 'Unisex';
-        // Return original if no match
         return divStr;
     },
     
@@ -244,8 +304,8 @@ const HokaConverter = {
             
             const filteredProducts = data.slice(startIdx).filter(row => {
                 if (!row || row.length < 10) return false;
-                const productName = row[5]; // Style Name / Product Name column
-                const division = row[0]; // Division/Gender column
+                const productName = row[5];
+                const division = row[0];
                 
                 // Skip youth products
                 if (division && (division.toString().trim().toLowerCase() === 'youth' || 
@@ -262,20 +322,20 @@ const HokaConverter = {
             for (let i = 0; i < filteredProducts.length; i++) {
                 const product = filteredProducts[i];
                 
-                const division = product[0];  // Gender/Division
-                const productName = product[5];  // Style Name / Product Name
-                const colorway = product[6];  // Style Colorway / Product Color
-                const styleSKU = product[7];  // Style SKU / Product Number
-                const sizeInfo = product[8];  // Size
-                const variantSKU = product[9];  // Variant SKU / SKU
-                const upc = product[10];  // UPC
-                const availableDate = product[11];  // Available date (column 11)
-                const quantity = product[12];  // Quantity
-                const retail = product[14];  // MSRP
+                const division = product[0];
+                const productName = product[5];
+                const colorway = product[6];
+                const styleSKU = product[7];
+                const sizeInfo = product[8];
+                const variantSKU = product[9];
+                const upc = product[10];
+                const availableDate = product[11];
+                const quantity = product[12];
+                const retail = product[14];
                 
-                // CRITICAL FIX: Skip this variant if it's not available yet (future inventory)
+                // CRITICAL: Skip this variant if it's not available yet (future inventory)
                 if (!this.isAvailableNow(availableDate)) {
-                    continue; // Skip future inventory
+                    continue;
                 }
                 
                 const matchingProduct = this.getMatchingProduct(productName);
@@ -286,7 +346,6 @@ const HokaConverter = {
                 let size = sizeInfo ? sizeInfo.toString().replace(/[A-Z]/g, '') : '';
                 if (size) {
                     size = size.replace(/^0/, '');
-                    // Handle malformed sizes with slashes
                     if (size.includes('/')) {
                         size = size.split('/')[0];
                     }
@@ -302,14 +361,12 @@ const HokaConverter = {
                     
                     const sizeStr = sizeInfo.toString().toUpperCase();
                     
-                    // Also check product name for width indicators
                     const nameUpper = productName ? productName.toUpperCase() : '';
                     if (nameUpper.includes('X-WIDE') || nameUpper.includes('XWIDE')) {
                         width = 'Extra Wide';
                     } else if (nameUpper.includes(' WIDE')) {
                         width = 'Wide';
                     } else if (isWomen) {
-                        // Women's widths: B=Regular, D=Wide, EE=Extra Wide (2E)
                         if (sizeStr.includes('EE') || sizeStr.includes('2E')) {
                             width = 'Extra Wide';
                         } else if (sizeStr.endsWith('D') || sizeStr.includes('D ')) {
@@ -320,7 +377,6 @@ const HokaConverter = {
                             width = 'Wide';
                         }
                     } else {
-                        // Men's widths: D=Regular, EE=Wide (2E), EEEE=Extra Wide (4E)
                         if (sizeStr.includes('EEEE') || skuUpper.includes('EEEE')) {
                             width = 'Extra Wide';
                         } else if (sizeStr.includes('EE') || sizeStr.includes('2E') || skuUpper.includes('EE') || skuUpper.includes('2E')) {
@@ -438,7 +494,6 @@ const HokaConverter = {
     },
     
     generateInventoryCSV() {
-        // IMPROVED: Use Papa Parse for proper CSV generation instead of manual string building
         if (typeof Papa !== 'undefined') {
             return Papa.unparse(this.inventoryData, {
                 quotes: true,
@@ -447,7 +502,6 @@ const HokaConverter = {
             });
         }
         
-        // Fallback to manual generation if Papa Parse not available
         const inventoryHeaders = ['Handle', 'Title', 'Option1 Name', 'Option1 Value', 'Option2 Name', 'Option2 Value', 
                        'Option3 Name', 'Option3 Value', 'SKU', 'Barcode', 'HS Code', 'COO', 'Location', 'Bin name', 
                        'Incoming (not editable)', 'Unavailable (not editable)', 'Committed (not editable)', 
@@ -458,7 +512,7 @@ const HokaConverter = {
         this.inventoryData.forEach(row => {
             const csvRow = [
                 row.Handle,
-                `"${row.Title.replace(/"/g, '""')}"`, // Properly escape quotes in title
+                `"${row.Title.replace(/"/g, '""')}"`,
                 row['Option1 Name'],
                 row['Option1 Value'],
                 row['Option2 Name'] || '',
