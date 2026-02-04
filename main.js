@@ -1,4 +1,4 @@
-// Main Unified Converter Controller - COMPLETE WITH TRACKING & DATES
+// Main Unified Converter Controller - COMPLETE WITH TRACKING & DATES & ASICS HANDLE REPLACEMENT
 // Helper function to get formatted date
 function getFormattedDate() {
     const date = new Date();
@@ -7,6 +7,35 @@ function getFormattedDate() {
     const day = String(date.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
 }
+
+// ========== ASICS HANDLE MAPPING CONFIGURATION ==========
+// Add handle replacements here - format: 'old-handle': 'new-handle'
+const ASICS_HANDLE_MAPPING = {
+    '1013a213-800': 'unisex-asics-novablast-5-la-marathon',
+    // Add more handle mappings here as needed
+    // Example:
+    // 'asics-gel-nimbus-25-mens-black-white': 'asics-gel-nimbus-25-black-white',
+};
+
+// Function to replace handles in ASICS data
+function replaceAsicsHandles(inventory) {
+    return inventory.map(row => {
+        const originalHandle = row.Handle;
+        
+        // Check if this handle needs to be replaced
+        if (ASICS_HANDLE_MAPPING[originalHandle]) {
+            const newHandle = ASICS_HANDLE_MAPPING[originalHandle];
+            console.log(`Replacing ASICS handle: "${originalHandle}" → "${newHandle}"`);
+            return {
+                ...row,
+                Handle: newHandle
+            };
+        }
+        
+        return row;
+    });
+}
+// ========== END ASICS HANDLE MAPPING ==========
 
 const BrandConverter = {
     brands: {
@@ -382,8 +411,57 @@ async function convertBrand(brand) {
             const text = await file.text();
             const parsed = Papa.parse(text, { header: true });
             inventory = parsed.data.filter(row => row.Handle && row.Handle.trim() !== '');
+            
+            // ========== APPLY HANDLE REPLACEMENT FOR ASICS ==========
+            if (brand === 'asics') {
+                console.log(`Processing ASICS file with ${inventory.length} variants`);
+                
+                // Count how many handles will be replaced
+                const replacementCount = inventory.filter(row => ASICS_HANDLE_MAPPING[row.Handle]).length;
+                
+                if (replacementCount > 0) {
+                    console.log(`Found ${replacementCount} handles to replace in ASICS file`);
+                    inventory = replaceAsicsHandles(inventory);
+                    BrandConverter.showStatus(brand, `Processed ${inventory.length} variants (${replacementCount} handles replaced)`, 'success');
+                } else {
+                    BrandConverter.showStatus(brand, `Processed ${inventory.length} variants (no handle replacements needed)`, 'success');
+                }
+            }
+            // ========== END HANDLE REPLACEMENT ==========
+            
             BrandConverter.brands[brand].inventory = inventory;
-            BrandConverter.brands[brand].csv = text;
+            
+            // Regenerate CSV with potentially replaced handles
+            const inventoryHeaders = ['Handle', 'Title', '"Option1 Name"', '"Option1 Value"', '"Option2 Name"', '"Option2 Value"', 
+                           '"Option3 Name"', '"Option3 Value"', 'SKU', 'Barcode', '"HS Code"', 'COO', 'Location', '"Bin name"', 
+                           '"Incoming (not editable)"', '"Unavailable (not editable)"', '"Committed (not editable)"', 
+                           '"Available (not editable)"', '"On hand (current)"', '"On hand (new)"'];
+            
+            const csvRows = [inventoryHeaders.join(',')];
+            
+            inventory.forEach(row => {
+                const csvRow = [
+                    row.Handle,
+                    `"${(row.Title || '').replace(/"/g, '""')}"`,
+                    row['Option1 Name'],
+                    row['Option1 Value'],
+                    row['Option2 Name'] || '',
+                    row['Option2 Value'] || '',
+                    row['Option3 Name'] || '',
+                    row['Option3 Value'] || '',
+                    row.SKU,
+                    row.Barcode || '',
+                    row['HS Code'] || '',
+                    row.COO || '',
+                    row.Location || '',
+                    row['Bin name'] || '',
+                    '', '', '', '', '', '',
+                    row['On hand (new)']
+                ];
+                csvRows.push(csvRow.join(','));
+            });
+            
+            BrandConverter.brands[brand].csv = csvRows.join('\n');
         } else {
             // Use brand-specific converters for brands that need conversion
             switch(brand) {
@@ -408,9 +486,9 @@ async function convertBrand(brand) {
                     BrandConverter.brands[brand].csv = NewBalanceConverter.generateInventoryCSV();
                     break;
             }
+            BrandConverter.showStatus(brand, `Processed ${inventory.length} variants`, 'success');
         }
         
-        BrandConverter.showStatus(brand, `Processed ${inventory.length} variants`, 'success');
         BrandConverter.updateDownloadSection();
     } catch (error) {
         BrandConverter.showStatus(brand, 'Error: ' + error.message, 'error');
