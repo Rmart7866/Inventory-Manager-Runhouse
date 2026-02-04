@@ -504,7 +504,12 @@ function downloadUnified() {
     ['saucony', 'hoka', 'puma', 'newbalance', 'asics', 'brooks', 'on'].forEach(brand => {
         const checkbox = document.getElementById(`select-${brand}`);
         if (checkbox && checkbox.checked && BrandConverter.brands[brand].inventory.length > 0) {
-            allInventory.push(...BrandConverter.brands[brand].inventory);
+            // Apply handle replacement for ASICS if needed (safety check)
+            let brandInventory = [...BrandConverter.brands[brand].inventory];
+            if (brand === 'asics') {
+                brandInventory = replaceAsicsHandles(brandInventory);
+            }
+            allInventory.push(...brandInventory);
             selectedBrands.push(BrandConverter.getBrandDisplayName(brand));
         }
     });
