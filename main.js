@@ -8,7 +8,6 @@ function getFormattedDate() {
     return `${year}-${month}-${day}`;
 }
 
-
 // ========== ASICS HANDLE MAPPING CONFIGURATION ==========
 // Add handle replacements here - format: 'old-handle': 'new-handle'
 const ASICS_HANDLE_MAPPING = {
@@ -258,13 +257,9 @@ const BrandConverter = {
                 hasAnyInventory = true;
                 totalVariants += this.brands[brand].inventory.length;
                 
-                // Create container for checkbox and button
+                // Create container for checkbox and buttons in a row
                 const container = document.createElement('div');
-                container.className = 'download-item';
-                container.style.display = 'flex';
-                container.style.alignItems = 'center';
-                container.style.gap = '12px';
-                container.style.marginBottom = '12px';
+                container.className = 'brand-download-row';
                 
                 // Add checkbox for unified selection
                 const checkbox = document.createElement('input');
@@ -280,16 +275,13 @@ const BrandConverter = {
                 // Create download button
                 const btn = document.createElement('button');
                 btn.className = `download-btn ${brand}`;
-                btn.style.flex = '1';
-                btn.innerHTML = `📥 ${this.getBrandDisplayName(brand)} (${this.brands[brand].inventory.length} variants)`;
+                btn.innerHTML = `${this.getBrandDisplayName(brand)} <span style="color: #6c757d; font-weight: 400;">(${this.brands[brand].inventory.length} variants)</span>`;
                 btn.onclick = () => this.downloadBrandInventory(brand);
                 
                 // Create reset download button
                 const resetBtn = document.createElement('button');
                 resetBtn.className = `download-btn reset-btn`;
-                resetBtn.style.flex = '0.5';
-                resetBtn.style.backgroundColor = '#dc3545';
-                resetBtn.innerHTML = `🔄 Reset (All 0s)`;
+                resetBtn.innerHTML = `Reset to 0`;
                 resetBtn.onclick = () => this.downloadBrandReset(brand);
                 
                 container.appendChild(checkbox);
