@@ -44,6 +44,12 @@ const ASICS_SIZE_MAPPING = {
     '15': 'M15'
 };
 
+// Handles that need size conversion (only specific products)
+const ASICS_HANDLES_NEEDING_SIZE_CONVERSION = [
+    'unisex-asics-novablast-5-la-marathon',
+    // Add more handles here if other ASICS products need size conversion
+];
+
 // Function to replace handles in ASICS data
 function replaceAsicsHandles(inventory) {
     return inventory.map(row => {
@@ -63,15 +69,15 @@ function replaceAsicsHandles(inventory) {
     });
 }
 
-// Function to convert ASICS sizes to Shopify unisex format
+// Function to convert ASICS sizes to Shopify unisex format (only for specific handles)
 function convertAsicsSizes(inventory) {
     return inventory.map(row => {
         const originalSize = row['Option1 Value'];
         
-        // Check if this size needs to be converted
-        if (ASICS_SIZE_MAPPING[originalSize]) {
+        // Only convert sizes for handles that need it
+        if (ASICS_HANDLES_NEEDING_SIZE_CONVERSION.includes(row.Handle) && ASICS_SIZE_MAPPING[originalSize]) {
             const newSize = ASICS_SIZE_MAPPING[originalSize];
-            console.log(`Converting ASICS size: "${originalSize}" → "${newSize}"`);
+            console.log(`Converting ASICS size for ${row.Handle}: "${originalSize}" → "${newSize}"`);
             return {
                 ...row,
                 'Option1 Value': newSize
@@ -277,8 +283,17 @@ const BrandConverter = {
                 btn.innerHTML = `📥 ${this.getBrandDisplayName(brand)} (${this.brands[brand].inventory.length} variants)`;
                 btn.onclick = () => this.downloadBrandInventory(brand);
                 
+                // Create reset download button
+                const resetBtn = document.createElement('button');
+                resetBtn.className = `download-btn reset-btn`;
+                resetBtn.style.flex = '0.5';
+                resetBtn.style.backgroundColor = '#dc3545';
+                resetBtn.innerHTML = `🔄 Reset (All 0s)`;
+                resetBtn.onclick = () => this.downloadBrandReset(brand);
+                
                 container.appendChild(checkbox);
                 container.appendChild(btn);
+                container.appendChild(resetBtn);
                 individualDownloads.appendChild(container);
             }
         });
@@ -330,6 +345,57 @@ const BrandConverter = {
         const date = getFormattedDate();
         const filename = `${brand}-inventory-${date}.csv`;
         const csvData = this.brands[brand].csv;
+        
+        const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', filename);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    },
+    
+    downloadBrandReset(brand) {
+        const date = getFormattedDate();
+        const filename = `${brand}-reset-${date}.csv`;
+        
+        // Get inventory and set all quantities to 0
+        const resetInventory = this.brands[brand].inventory.map(row => ({
+            ...row,
+            'On hand (new)': '0'
+        }));
+        
+        // Generate CSV with 0 quantities
+        const inventoryHeaders = ['Handle', 'Title', '"Option1 Name"', '"Option1 Value"', '"Option2 Name"', '"Option2 Value"', 
+                       '"Option3 Name"', '"Option3 Value"', 'SKU', 'Barcode', '"HS Code"', 'COO', 'Location', '"Bin name"', 
+                       '"Incoming (not editable)"', '"Unavailable (not editable)"', '"Committed (not editable)"', 
+                       '"Available (not editable)"', '"On hand (current)"', '"On hand (new)"'];
+        
+        const csvRows = [inventoryHeaders.join(',')];
+        
+        resetInventory.forEach(row => {
+            const csvRow = [
+                row.Handle,
+                `"${(row.Title || '').replace(/"/g, '""')}"`,
+                row['Option1 Name'],
+                row['Option1 Value'],
+                row['Option2 Name'] || '',
+                row['Option2 Value'] || '',
+                row['Option3 Name'] || '',
+                row['Option3 Value'] || '',
+                row.SKU,
+                row.Barcode || '',
+                '', '',
+                row.Location,
+                '', '', '', '', '', '',
+                '0'  // All quantities set to 0
+            ];
+            csvRows.push(csvRow.join(','));
+        });
+        
+        const csvData = csvRows.join('\n');
         
         const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
         const link = document.createElement('a');
@@ -640,6 +706,79 @@ function downloadUnified() {
             showComparisonReport();
         }
     }
+}
+
+// Download unified reset inventory - All quantities set to 0
+function downloadUnifiedReset() {
+    const allInventory = [];
+    let selectedBrands = [];
+    
+    ['saucony', 'hoka', 'puma', 'newbalance', 'asics', 'brooks', 'on'].forEach(brand => {
+        const checkbox = document.getElementById(`select-${brand}`);
+        if (checkbox && checkbox.checked && BrandConverter.brands[brand].inventory.length > 0) {
+            // Apply handle replacement for ASICS if needed (safety check)
+            let brandInventory = [...BrandConverter.brands[brand].inventory];
+            if (brand === 'asics') {
+                brandInventory = replaceAsicsHandles(brandInventory);
+                brandInventory = convertAsicsSizes(brandInventory);
+            }
+            allInventory.push(...brandInventory);
+            selectedBrands.push(BrandConverter.getBrandDisplayName(brand));
+        }
+    });
+    
+    if (allInventory.length === 0) {
+        alert('Please select at least one brand to download!');
+        return;
+    }
+    
+    // Set all quantities to 0
+    const resetInventory = allInventory.map(row => ({
+        ...row,
+        'On hand (new)': '0'
+    }));
+    
+    const inventoryHeaders = ['Handle', 'Title', '"Option1 Name"', '"Option1 Value"', '"Option2 Name"', '"Option2 Value"', 
+                   '"Option3 Name"', '"Option3 Value"', 'SKU', 'Barcode', '"HS Code"', 'COO', 'Location', '"Bin name"', 
+                   '"Incoming (not editable)"', '"Unavailable (not editable)"', '"Committed (not editable)"', 
+                   '"Available (not editable)"', '"On hand (current)"', '"On hand (new)"'];
+    
+    const csvRows = [inventoryHeaders.join(',')];
+    
+    resetInventory.forEach(row => {
+        const csvRow = [
+            row.Handle,
+            `"${(row.Title || '').replace(/"/g, '""')}"`,
+            row['Option1 Name'],
+            row['Option1 Value'],
+            row['Option2 Name'] || '',
+            row['Option2 Value'] || '',
+            row['Option3 Name'] || '',
+            row['Option3 Value'] || '',
+            row.SKU,
+            row.Barcode || '',
+            '', '',
+            row.Location,
+            '', '', '', '', '', '',
+            '0'  // All quantities set to 0
+        ];
+        csvRows.push(csvRow.join(','));
+    });
+    
+    const csvData = csvRows.join('\n');
+    
+    const date = getFormattedDate();
+    const filename = `combined-reset-${date}.csv`;
+    
+    const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
 }
 
 // Initialize on page load
