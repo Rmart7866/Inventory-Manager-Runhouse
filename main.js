@@ -8,6 +8,7 @@ function getFormattedDate() {
     return `${year}-${month}-${day}`;
 }
 
+
 // ========== ASICS HANDLE MAPPING CONFIGURATION ==========
 // Add handle replacements here - format: 'old-handle': 'new-handle'
 const ASICS_HANDLE_MAPPING = {
