@@ -525,7 +525,6 @@
             display: none;
         }
 
-        
         /* Uploaded File */
         .uploaded-file {
             background: #28a745;
@@ -796,7 +795,7 @@
         <div class="container">
             <!-- Chrome Warning -->
             <div class="chrome-warning">
-                ⚠️ IMPORTANT: You must use Google Chrome browser to run the ASICS, Brooks, and ON Running scrapers
+                IMPORTANT: You must use Google Chrome browser to run the ASICS, Brooks, and ON Running scrapers
             </div>
 
             <div class="header">
@@ -1083,7 +1082,7 @@
                             </li>
                         </ol>
                         <div class="copy-links-section">
-                            <h5>📋 Current ASICS Product Links (will be updated as we add products):</h5>
+                            <h5>Current ASICS Product Links (will be updated as we add products):</h5>
                             <div class="link-list" id="asics-links">
 https://b2b.asics.com/orders/100522727/products/1013A142?colorCode=401&deliveryDate=2025-11-18
 https://b2b.asics.com/orders/100530815/products/1011C083?colorCode=100
@@ -1153,7 +1152,7 @@ https://b2b.asics.com/orders/100555134/products/1011C127?colorCode=001&deliveryD
                             </li>
                         </ol>
                         <div class="copy-links-section">
-                            <h5>📋 Current Brooks Product Links (will be updated as we add products):</h5>
+                            <h5>Current Brooks Product Links (will be updated as we add products):</h5>
                             <div class="link-list" id="brooks-links">
                                 https://fasttrack.brooksrunning.com/home(overlay:cs/brooks/120468/120468048/9284_41941)?preset=now&sortField=Default&sortDirection=Desc&withRelatedVariants=true&collapse=false
                                 https://fasttrack.brooksrunning.com/home(overlay:cs/brooks/110479/110479091/9284_41941)?preset=now&sortField=Default&sortDirection=Desc&withRelatedVariants=true&collapse=false 
@@ -1265,10 +1264,10 @@ https://fasttrack.brooksrunning.com/browse/search(overlay:cs/brooks/120427/12042
                     <h2>Combined Inventory</h2>
                     <div style="display: flex; gap: 12px; margin-bottom: 20px;">
                         <button class="unified-btn" onclick="downloadUnified()" style="flex: 1;">
-                            📦 Download Selected Brands
+                            Download Selected Brands
                         </button>
                         <button class="unified-btn reset-btn" onclick="downloadUnifiedReset()" style="flex: 1; background: #dc3545;">
-                            🔄 Download Reset (All 0s)
+                            Download Reset (All 0s)
                         </button>
                     </div>
                     <div class="unified-info" id="unified-info"></div>
@@ -1315,7 +1314,7 @@ https://fasttrack.brooksrunning.com/browse/search(overlay:cs/brooks/120427/12042
             navigator.clipboard.writeText(text).then(() => {
                 const btn = event.target;
                 const originalText = btn.textContent;
-                btn.textContent = '✓ Copied!';
+                btn.textContent = 'Copied!';
                 btn.classList.add('copied');
                 
                 setTimeout(() => {
