@@ -1,339 +1,283 @@
-// ====================================================================
-// INVENTORY TRACKER - CORRECTED VERSION
-// ====================================================================
-// Discontinued = Any colorway not present in new file (set qty to 0)
-// New Colorway = Any colorway in new file that wasn't in old file
-// ====================================================================
+// ========== INVENTORY TRACKER (FIRESTORE) ==========
+// Source of truth for what's currently on Shopify
+// Tracks both product models and individual colorways per brand
+// FIXED: Per-brand caching (was global, causing cross-brand data leaks)
 
-function compareInventories(yesterdayCSV, todayCSV) {
-    console.log('Starting comparison...');
-    
-    // Parse CSVs
-    const yesterday = parseShopifyCSV(yesterdayCSV);
-    const today = parseShopifyCSV(todayCSV);
-    
-    console.log(`Yesterday variants: ${yesterday.length}`);
-    console.log(`Today variants: ${today.length}`);
-    
-    // Group by colorway (Handle)
-    const yesterdayColorways = new Map(); // handle -> variants
-    const todayColorways = new Map();
-    
-    // Group yesterday's data by Handle (colorway)
-    yesterday.forEach(variant => {
-        if (!yesterdayColorways.has(variant.Handle)) {
-            yesterdayColorways.set(variant.Handle, []);
-        }
-        yesterdayColorways.get(variant.Handle).push(variant);
-    });
-    
-    // Group today's data by Handle (colorway)
-    today.forEach(variant => {
-        if (!todayColorways.has(variant.Handle)) {
-            todayColorways.set(variant.Handle, []);
-        }
-        todayColorways.get(variant.Handle).push(variant);
-    });
-    
-    // Find DISCONTINUED colorways (in yesterday but NOT in today)
-    const discontinuedColorways = [];
-    
-    yesterdayColorways.forEach((variants, handle) => {
-        if (!todayColorways.has(handle)) {
-            // This colorway is discontinued
-            discontinuedColorways.push({
-                handle: handle,
-                title: variants[0].Title,
-                variants: variants
-            });
-        }
-    });
-    
-    // Find NEW colorways (in today but NOT in yesterday)
-    const newColorways = [];
-    
-    todayColorways.forEach((variants, handle) => {
-        if (!yesterdayColorways.has(handle)) {
-            // This is a new colorway
-            newColorways.push({
-                handle: handle,
-                title: variants[0].Title,
-                variants: variants
-            });
-        }
-    });
-    
-    // Sort alphabetically by title
-    discontinuedColorways.sort((a, b) => a.title.localeCompare(b.title));
-    newColorways.sort((a, b) => a.title.localeCompare(b.title));
-    
-    console.log(`Found ${discontinuedColorways.length} discontinued colorways`);
-    console.log(`Found ${newColorways.length} new colorways`);
-    
-    return {
-        discontinuedColorways,
-        newColorways,
-        yesterdayColorways,
-        todayColorways
-    };
-}
+var InventoryTracker = {
 
-function parseShopifyCSV(csvText) {
-    const lines = csvText.trim().split('\n');
-    const headers = lines[0].split(',').map(h => h.trim().replace(/^"|"$/g, ''));
-    
-    const handleIndex = headers.indexOf('Handle');
-    const titleIndex = headers.indexOf('Title');
-    const variantSKUIndex = headers.indexOf('Variant SKU');
-    const option1Index = headers.indexOf('Option1 Value'); // Size
-    const variantInventoryQtyIndex = headers.indexOf('Variant Inventory Qty');
-    
-    const variants = [];
-    
-    for (let i = 1; i < lines.length; i++) {
-        const line = lines[i];
-        if (!line.trim()) continue;
-        
-        const values = parseCSVLine(line);
-        
-        const handle = values[handleIndex]?.trim().replace(/^"|"$/g, '') || '';
-        const title = values[titleIndex]?.trim().replace(/^"|"$/g, '') || '';
-        const sku = values[variantSKUIndex]?.trim().replace(/^"|"$/g, '') || '';
-        const size = values[option1Index]?.trim().replace(/^"|"$/g, '') || '';
-        const qty = values[variantInventoryQtyIndex]?.trim().replace(/^"|"$/g, '') || '0';
-        
-        if (handle && size) {
-            variants.push({
-                Handle: handle,
-                Title: title,
-                SKU: sku,
-                Size: size,
-                Quantity: parseInt(qty) || 0
-            });
-        }
-    }
-    
-    return variants;
-}
+    // Per-brand cache: { brandName: { models: Set, colorways: Map, loaded: true } }
+    _cache: {},
+    _lastLoadedBrand: null,
 
-function parseCSVLine(line) {
-    const values = [];
-    let current = '';
-    let inQuotes = false;
-    
-    for (let i = 0; i < line.length; i++) {
-        const char = line[i];
-        
-        if (char === '"') {
-            if (inQuotes && line[i + 1] === '"') {
-                current += '"';
-                i++;
-            } else {
-                inQuotes = !inQuotes;
-            }
-        } else if (char === ',' && !inQuotes) {
-            values.push(current);
-            current = '';
+    _getCache: function(brand) {
+        if (!this._cache[brand]) {
+            this._cache[brand] = { models: null, colorways: null, loaded: false };
+        }
+        return this._cache[brand];
+    },
+
+    // ========== LOAD FROM FIRESTORE ==========
+    load: function(brand) {
+        var self = this;
+        var cache = this._getCache(brand);
+
+        if (cache.loaded) {
+            return Promise.resolve({ models: cache.models, colorways: cache.colorways });
+        }
+
+        var modelsPromise = db.collection('inventory-tracker').doc(brand).collection('models')
+            .where('active', '==', true).get()
+            .then(function(snap) {
+                var models = new Set();
+                snap.forEach(function(doc) { models.add(doc.id); });
+                return models;
+            }).catch(function() { return new Set(); });
+
+        var colorwaysPromise = db.collection('inventory-tracker').doc(brand).collection('products')
+            .where('active', '==', true).get()
+            .then(function(snap) {
+                var cw = new Map();
+                snap.forEach(function(doc) { cw.set(doc.id, doc.data()); });
+                return cw;
+            }).catch(function() { return new Map(); });
+
+        return Promise.all([modelsPromise, colorwaysPromise]).then(function(results) {
+            cache.models = results[0];
+            cache.colorways = results[1];
+            cache.loaded = true;
+            self._lastLoadedBrand = brand;
+            console.log('[' + brand + '] Firestore: ' + cache.models.size + ' models, ' + cache.colorways.size + ' colorways');
+            return { models: cache.models, colorways: cache.colorways };
+        });
+    },
+
+    invalidateCache: function(brand) {
+        if (brand) {
+            this._cache[brand] = { models: null, colorways: null, loaded: false };
         } else {
-            current += char;
+            this._cache = {};
         }
-    }
-    values.push(current);
-    
-    return values;
-}
+    },
 
-function generateReport(comparison) {
-    const { discontinuedColorways, newColorways } = comparison;
-    
-    let report = '';
-    
-    // Header
-    report += '======================================================================\n';
-    report += '              RUN HOUSE INVENTORY COMPARISON REPORT\n';
-    report += '======================================================================\n\n';
-    
-    // Discontinued Colorways Section
-    report += `DISCONTINUED COLORWAYS\n`;
-    report += `======================================================================\n`;
-    report += `${discontinuedColorways.length} colorways discontinued\n`;
-    report += `${discontinuedColorways.reduce((sum, cw) => sum + cw.variants.length, 0)} total variants\n\n`;
-    
-    if (discontinuedColorways.length > 0) {
-        discontinuedColorways.forEach(colorway => {
-            report += `${colorway.title}\n`;
-            report += `  Sizes: `;
-            const sizeList = colorway.variants
-                .sort((a, b) => parseFloat(a.Size) - parseFloat(b.Size))
-                .map(v => `${v.Size} (${v.Quantity})`)
-                .join(', ');
-            report += sizeList + '\n';
-            report += `  Total variants: ${colorway.variants.length}\n\n`;
-        });
-    } else {
-        report += 'No discontinued colorways found.\n\n';
-    }
-    
-    report += '\n';
-    
-    // New Colorways Section
-    report += `NEW COLORWAYS\n`;
-    report += `======================================================================\n`;
-    report += `${newColorways.length} new colorways detected\n`;
-    report += `${newColorways.reduce((sum, cw) => sum + cw.variants.length, 0)} total variants\n\n`;
-    
-    if (newColorways.length > 0) {
-        newColorways.forEach(colorway => {
-            report += `${colorway.title}\n`;
-            report += `  Sizes: `;
-            const sizeList = colorway.variants
-                .sort((a, b) => parseFloat(a.Size) - parseFloat(b.Size))
-                .map(v => `${v.Size} (${v.Quantity})`)
-                .join(', ');
-            report += sizeList + '\n';
-            report += `  Total variants: ${colorway.variants.length}\n\n`;
-        });
-    } else {
-        report += 'No new colorways found.\n\n';
-    }
-    
-    report += '======================================================================\n';
-    
-    return report;
-}
+    // ========== CHECKS (per-brand, defaults to last loaded) ==========
+    isKnownModel: function(modelName, brand) {
+        var cache = this._getCache(brand || this._lastLoadedBrand || '_default');
+        return cache.models ? cache.models.has(modelName) : false;
+    },
 
-function generateDiscontinuedCSV(discontinuedColorways) {
-    if (discontinuedColorways.length === 0) {
-        return null;
-    }
-    
-    // Shopify CSV format
-    let csv = 'Handle,Title,Body (HTML),Vendor,Product Category,Type,Tags,Published,Option1 Name,Option1 Value,Variant SKU,Variant Grams,Variant Inventory Tracker,Variant Inventory Qty,Variant Inventory Policy,Variant Fulfillment Service,Variant Price,Variant Compare At Price,Variant Requires Shipping,Variant Taxable,Variant Barcode,Image Src,Image Position,Image Alt Text,Gift Card,SEO Title,SEO Description,Google Shopping / Google Product Category,Google Shopping / Gender,Google Shopping / Age Group,Google Shopping / MPN,Google Shopping / Condition,Google Shopping / Custom Product,Google Shopping / Custom Label 0,Google Shopping / Custom Label 1,Google Shopping / Custom Label 2,Google Shopping / Custom Label 3,Google Shopping / Custom Label 4,Variant Image,Variant Weight Unit,Variant Tax Code,Cost per item,Included / United States,Price / United States,Compare At Price / United States,Included / International,Price / International,Compare At Price / International,Status\n';
-    
-    discontinuedColorways.forEach(colorway => {
-        colorway.variants.forEach((variant, index) => {
-            const isFirstVariant = index === 0;
-            
-            csv += `"${variant.Handle}",`;
-            csv += `"${isFirstVariant ? variant.Title : ''}",`;
-            csv += `"",`; // Body (HTML)
-            csv += `"",`; // Vendor
-            csv += `"",`; // Product Category
-            csv += `"",`; // Type
-            csv += `"",`; // Tags
-            csv += `"TRUE",`; // Published
-            csv += `"${isFirstVariant ? 'Size' : ''}",`; // Option1 Name
-            csv += `"${variant.Size}",`; // Option1 Value
-            csv += `"${variant.SKU}",`; // Variant SKU
-            csv += `"0",`; // Variant Grams
-            csv += `"shopify",`; // Variant Inventory Tracker
-            csv += `"0",`; // Variant Inventory Qty - SET TO 0
-            csv += `"deny",`; // Variant Inventory Policy
-            csv += `"manual",`; // Variant Fulfillment Service
-            csv += `"",`; // Variant Price
-            csv += `"",`; // Variant Compare At Price
-            csv += `"TRUE",`; // Variant Requires Shipping
-            csv += `"TRUE",`; // Variant Taxable
-            csv += `"",`; // Variant Barcode
-            csv += `"",`; // Image Src
-            csv += `"",`; // Image Position
-            csv += `"",`; // Image Alt Text
-            csv += `"FALSE",`; // Gift Card
-            csv += `"",`; // SEO Title
-            csv += `"",`; // SEO Description
-            csv += `"",`; // Google Shopping / Google Product Category
-            csv += `"",`; // Google Shopping / Gender
-            csv += `"",`; // Google Shopping / Age Group
-            csv += `"",`; // Google Shopping / MPN
-            csv += `"",`; // Google Shopping / Condition
-            csv += `"",`; // Google Shopping / Custom Product
-            csv += `"",`; // Google Shopping / Custom Label 0
-            csv += `"",`; // Google Shopping / Custom Label 1
-            csv += `"",`; // Google Shopping / Custom Label 2
-            csv += `"",`; // Google Shopping / Custom Label 3
-            csv += `"",`; // Google Shopping / Custom Label 4
-            csv += `"",`; // Variant Image
-            csv += `"lb",`; // Variant Weight Unit
-            csv += `"",`; // Variant Tax Code
-            csv += `"",`; // Cost per item
-            csv += `"TRUE",`; // Included / United States
-            csv += `"",`; // Price / United States
-            csv += `"",`; // Compare At Price / United States
-            csv += `"FALSE",`; // Included / International
-            csv += `"",`; // Price / International
-            csv += `"",`; // Compare At Price / International
-            csv += `"active"`; // Status
-            csv += '\n';
-        });
-    });
-    
-    return csv;
-}
+    isKnownColorway: function(handle, brand) {
+        var cache = this._getCache(brand || this._lastLoadedBrand || '_default');
+        return cache.colorways ? cache.colorways.has(handle) : false;
+    },
 
-function generateNewColorwaysCSV(newColorways) {
-    if (newColorways.length === 0) {
-        return null;
-    }
-    
-    // Shopify CSV format
-    let csv = 'Handle,Title,Body (HTML),Vendor,Product Category,Type,Tags,Published,Option1 Name,Option1 Value,Variant SKU,Variant Grams,Variant Inventory Tracker,Variant Inventory Qty,Variant Inventory Policy,Variant Fulfillment Service,Variant Price,Variant Compare At Price,Variant Requires Shipping,Variant Taxable,Variant Barcode,Image Src,Image Position,Image Alt Text,Gift Card,SEO Title,SEO Description,Google Shopping / Google Product Category,Google Shopping / Gender,Google Shopping / Age Group,Google Shopping / MPN,Google Shopping / Condition,Google Shopping / Custom Product,Google Shopping / Custom Label 0,Google Shopping / Custom Label 1,Google Shopping / Custom Label 2,Google Shopping / Custom Label 3,Google Shopping / Custom Label 4,Variant Image,Variant Weight Unit,Variant Tax Code,Cost per item,Included / United States,Price / United States,Compare At Price / United States,Included / International,Price / International,Compare At Price / International,Status\n';
-    
-    newColorways.forEach(colorway => {
-        colorway.variants.forEach((variant, index) => {
-            const isFirstVariant = index === 0;
-            
-            csv += `"${variant.Handle}",`;
-            csv += `"${isFirstVariant ? variant.Title : ''}",`;
-            csv += `"",`; // Body (HTML)
-            csv += `"",`; // Vendor
-            csv += `"",`; // Product Category
-            csv += `"",`; // Type
-            csv += `"",`; // Tags
-            csv += `"TRUE",`; // Published
-            csv += `"${isFirstVariant ? 'Size' : ''}",`; // Option1 Name
-            csv += `"${variant.Size}",`; // Option1 Value
-            csv += `"${variant.SKU}",`; // Variant SKU
-            csv += `"0",`; // Variant Grams
-            csv += `"shopify",`; // Variant Inventory Tracker
-            csv += `"${variant.Quantity}",`; // Variant Inventory Qty - ACTUAL QTY
-            csv += `"deny",`; // Variant Inventory Policy
-            csv += `"manual",`; // Variant Fulfillment Service
-            csv += `"",`; // Variant Price
-            csv += `"",`; // Variant Compare At Price
-            csv += `"TRUE",`; // Variant Requires Shipping
-            csv += `"TRUE",`; // Variant Taxable
-            csv += `"",`; // Variant Barcode
-            csv += `"",`; // Image Src
-            csv += `"",`; // Image Position
-            csv += `"",`; // Image Alt Text
-            csv += `"FALSE",`; // Gift Card
-            csv += `"",`; // SEO Title
-            csv += `"",`; // SEO Description
-            csv += `"",`; // Google Shopping / Google Product Category
-            csv += `"",`; // Google Shopping / Gender
-            csv += `"",`; // Google Shopping / Age Group
-            csv += `"",`; // Google Shopping / MPN
-            csv += `"",`; // Google Shopping / Condition
-            csv += `"",`; // Google Shopping / Custom Product
-            csv += `"",`; // Google Shopping / Custom Label 0
-            csv += `"",`; // Google Shopping / Custom Label 1
-            csv += `"",`; // Google Shopping / Custom Label 2
-            csv += `"",`; // Google Shopping / Custom Label 3
-            csv += `"",`; // Google Shopping / Custom Label 4
-            csv += `"",`; // Variant Image
-            csv += `"lb",`; // Variant Weight Unit
-            csv += `"",`; // Variant Tax Code
-            csv += `"",`; // Cost per item
-            csv += `"TRUE",`; // Included / United States
-            csv += `"",`; // Price / United States
-            csv += `"",`; // Compare At Price / United States
-            csv += `"FALSE",`; // Included / International
-            csv += `"",`; // Price / International
-            csv += `"",`; // Compare At Price / International
-            csv += `"active"`; // Status
-            csv += '\n';
+    getKnownModels: function(brand) {
+        var cache = this._getCache(brand || this._lastLoadedBrand || '_default');
+        return cache.models || new Set();
+    },
+
+    getKnownColorways: function(brand) {
+        var cache = this._getCache(brand || this._lastLoadedBrand || '_default');
+        return cache.colorways || new Map();
+    },
+
+    // ========== COMPARE ATS VS FIRESTORE ==========
+    compare: function(inventoryData, brand) {
+        var self = this;
+        // If no brand specified, use the last brand that was loaded
+        if (!brand) brand = this._lastLoadedBrand || '_default';
+        var cache = this._getCache(brand);
+        var currentHandles = new Map();
+
+        for (var i = 0; i < inventoryData.length; i++) {
+            var row = inventoryData[i];
+            var handle = row.Handle;
+            if (!currentHandles.has(handle)) {
+                currentHandles.set(handle, { handle: handle, title: row.Title || '', variants: {} });
+            }
+            var p = currentHandles.get(handle);
+            if (!p.title && row.Title) p.title = row.Title;
+            p.variants[row['Option1 Value']] = {
+                sku: row.SKU, barcode: row.Barcode || '',
+                quantity: parseInt(row['On hand (new)']) || 0
+            };
+        }
+
+        var knownColorways = cache.colorways || new Map();
+        var knownModels = cache.models || new Set();
+
+        // Separate new handles into new PRODUCTS vs new COLORWAYS
+        var newProducts = [];
+        var newColorways = [];
+        currentHandles.forEach(function(product, handle) {
+            if (!knownColorways.has(handle)) {
+                // Try to identify the model name from the title
+                var modelName = null;
+                if (product.title && typeof HokaConverter !== 'undefined' && HokaConverter.identifyProduct) {
+                    modelName = HokaConverter.identifyProduct(product.title);
+                }
+
+                var entry = {
+                    handle: handle,
+                    title: product.title,
+                    variantCount: Object.keys(product.variants).length,
+                    variants: product.variants,
+                    modelName: modelName
+                };
+
+                if (modelName && knownModels.has(modelName)) {
+                    newColorways.push(entry);
+                } else {
+                    newProducts.push(entry);
+                }
+            }
         });
-    });
-    
-    return csv;
-}
+
+        var removedColorways = [];
+        knownColorways.forEach(function(data, handle) {
+            if (!currentHandles.has(handle)) {
+                removedColorways.push({ handle: handle, title: data.title || handle, variants: data.variants || {} });
+            }
+        });
+
+        return {
+            newProducts: newProducts,
+            newColorways: newColorways,
+            removedColorways: removedColorways,
+            currentHandles: currentHandles,
+            summary: {
+                totalInATS: currentHandles.size,
+                totalInDB: knownColorways.size,
+                newProducts: newProducts.length,
+                newColorways: newColorways.length,
+                removedColorways: removedColorways.length,
+                matchingColorways: currentHandles.size - newProducts.length - newColorways.length
+            }
+        };
+    },
+
+    // ========== CONFIRM ON SHOPIFY ==========
+    confirmModels: function(brand, modelNames) {
+        var self = this;
+        var cache = this._getCache(brand);
+        var now = new Date().toISOString();
+        var promises = [];
+        for (var i = 0; i < modelNames.length; i++) {
+            (function(name) {
+                promises.push(
+                    db.collection('inventory-tracker').doc(brand).collection('models').doc(name).set({
+                        name: name, active: true, firstSeen: now, lastSeen: now
+                    }, { merge: true })
+                );
+                if (cache.models) cache.models.add(name);
+            })(modelNames[i]);
+        }
+        console.log('[' + brand + '] Confirming ' + modelNames.length + ' models');
+        return Promise.all(promises);
+    },
+
+    confirmColorways: function(brand, colorwayData) {
+        var self = this;
+        var cache = this._getCache(brand);
+        var now = new Date().toISOString();
+        var promises = [];
+        for (var i = 0; i < colorwayData.length; i++) {
+            (function(cw) {
+                promises.push(
+                    db.collection('inventory-tracker').doc(brand).collection('products').doc(cw.handle).set({
+                        title: cw.title, variants: cw.variants || {}, active: true, firstSeen: now, lastSeen: now
+                    }, { merge: true })
+                );
+                if (cache.colorways) {
+                    cache.colorways.set(cw.handle, { title: cw.title, variants: cw.variants || {}, active: true });
+                }
+            })(colorwayData[i]);
+        }
+        console.log('[' + brand + '] Confirming ' + colorwayData.length + ' colorways');
+        return Promise.all(promises);
+    },
+
+    // Update quantities for existing colorways (runs each generate)
+    updateExistingColorways: function(brand, inventoryData) {
+        var self = this;
+        var cache = this._getCache(brand);
+        var now = new Date().toISOString();
+        var byHandle = new Map();
+
+        for (var i = 0; i < inventoryData.length; i++) {
+            var row = inventoryData[i];
+            if (!byHandle.has(row.Handle)) byHandle.set(row.Handle, { title: row.Title || '', variants: {} });
+            var p = byHandle.get(row.Handle);
+            if (!p.title && row.Title) p.title = row.Title;
+            p.variants[row['Option1 Value']] = {
+                sku: row.SKU, barcode: row.Barcode || '',
+                quantity: parseInt(row['On hand (new)']) || 0
+            };
+        }
+
+        var knownColorways = cache.colorways || new Map();
+        var promises = [];
+        byHandle.forEach(function(data, handle) {
+            if (knownColorways.has(handle)) {
+                promises.push(
+                    db.collection('inventory-tracker').doc(brand).collection('products').doc(handle).update({
+                        variants: data.variants, lastSeen: now
+                    }).catch(function() {})
+                );
+            }
+        });
+
+        if (promises.length > 0) console.log('[' + brand + '] Updating ' + promises.length + ' existing colorways');
+        return Promise.all(promises);
+    },
+
+    // ========== ZEROED ROWS FOR REMOVED COLORWAYS ==========
+    generateRemovedRows: function(removedColorways) {
+        var rows = [];
+        for (var i = 0; i < removedColorways.length; i++) {
+            var product = removedColorways[i];
+            var variants = product.variants || {};
+            var isFirst = true;
+            var sizes = Object.keys(variants).sort(function(a, b) {
+                return (parseFloat(a) || 0) - (parseFloat(b) || 0);
+            });
+
+            if (sizes.length === 0) continue;
+
+            for (var j = 0; j < sizes.length; j++) {
+                var variant = variants[sizes[j]];
+                rows.push({
+                    Handle: product.handle,
+                    Title: isFirst ? (product.title || '') : '',
+                    'Option1 Name': isFirst ? 'Size' : '',
+                    'Option1 Value': sizes[j],
+                    'Option2 Name': '', 'Option2 Value': '',
+                    'Option3 Name': '', 'Option3 Value': '',
+                    SKU: variant.sku || '', Barcode: variant.barcode || '',
+                    'HS Code': '', COO: '',
+                    Location: 'Needham', 'Bin name': '',
+                    'Incoming (not editable)': '', 'Unavailable (not editable)': '',
+                    'Committed (not editable)': '', 'Available (not editable)': '',
+                    'On hand (current)': '', 'On hand (new)': 0
+                });
+                isFirst = false;
+            }
+        }
+        return rows;
+    },
+
+    // ========== STATUS ==========
+    checkStatus: function(brand) {
+        return db.collection('inventory-tracker').doc(brand).collection('products')
+            .where('active', '==', true).get()
+            .then(function(snap) {
+                var productCount = snap.size;
+                return db.collection('inventory-tracker').doc(brand).collection('models')
+                    .where('active', '==', true).get()
+                    .then(function(modelSnap) {
+                        return { connected: true, productCount: productCount, modelCount: modelSnap.size, hasData: productCount > 0 || modelSnap.size > 0 };
+                    });
+            }).catch(function(error) {
+                return { connected: false, productCount: 0, modelCount: 0, hasData: false, error: error.message };
+            });
+    }
+};
